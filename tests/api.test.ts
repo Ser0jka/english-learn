@@ -1,0 +1,185 @@
+import express from "express";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Server } from "node:http";
+import { registerAi } from "../ai.mjs";
+
+const realFetch = globalThis.fetch;
+let server: Server;
+let base: string;
+beforeEach(async () => {
+  vi.stubEnv("LEXI_API_KEY", "test-only-key");
+  vi.stubEnv("LEXI_API_BASE", "https://api.example.test/v1");
+  const app = express();
+  app.use(express.json());
+  registerAi(app);
+  server = await new Promise<Server>((resolve) => {
+    const s = app.listen(0, "127.0.0.1", () => resolve(s));
+  });
+  const address = server.address();
+  base = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
+});
+afterEach(async () => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  await new Promise<void>((resolve, reject) =>
+    server.close((e) => (e ? reject(e) : resolve())),
+  );
+});
+const post = async (route: string, body: unknown) =>
+  realFetch(base + route, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+const mockCompletion = (value: unknown) => {
+  const mock = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  typeof value === "string" ? value : JSON.stringify(value),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  );
+  vi.stubGlobal("fetch", mock);
+  return mock;
+};
+describe("optional AI API", () => {
+  it("returns a clear unavailable response without credentials", async () => {
+    vi.stubEnv("LEXI_API_KEY", "");
+    const mock = mockCompletion("unused");
+    const response = await post("/api/assistant", {
+      question: "Что значит forest?",
+      context: "forest",
+    });
+    expect(response.status).toBe(503);
+    expect(mock).not.toHaveBeenCalled();
+  });
+  it("validates question length before contacting a provider", async () => {
+    const mock = mockCompletion("unused");
+    const response = await post("/api/assistant", {
+      question: "x".repeat(2001),
+      context: "word",
+    });
+    expect(response.status).toBe(400);
+    expect(mock).not.toHaveBeenCalled();
+  });
+  it("sends scoped context to the provider and returns the answer", async () => {
+    const mock = mockCompletion("Forest — лес.");
+    const response = await post("/api/assistant", {
+      question: "Что значит слово?",
+      context: "forest",
+    });
+    expect(await response.json()).toEqual({ answer: "Forest — лес." });
+    const body = JSON.parse(mock.mock.calls[0][1].body);
+    expect(body.messages[1].content).toContain("forest");
+    expect(body.messages[0].content).toContain("Не выдумывай");
+  });
+  it("handles provider failure without leaking internal errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("private provider diagnostics", { status: 401 }),
+      ),
+    );
+    const response = await post("/api/assistant", {
+      question: "Что значит?",
+      context: "forest",
+    });
+    expect(response.status).toBe(502);
+    expect(await response.text()).not.toContain("private provider");
+  });
+  it("builds dictionary search sources and discards invented origin and quotes", async () => {
+    mockCompletion({
+      phrases: [
+        {
+          text: "a bookworm",
+          translation: "книжный червь",
+          usage: "О любителе чтения.",
+          exceptions: "Разговорное.",
+          example: "She is a bookworm.",
+          exampleRu: "Она любит читать.",
+          origin: "Invented history",
+          quote: { text: "Invented quote" },
+        },
+      ],
+    });
+    const response = await post("/api/materials/phrases", { word: "book" });
+    expect(response.status).toBe(200);
+    const { phrases } = await response.json();
+    expect(phrases[0].generated).toBe(true);
+    expect(phrases[0].source.url).toContain("dictionary.cambridge.org/search/");
+    expect(phrases[0].origin).not.toContain("Invented");
+    expect(phrases[0].quote).toBeUndefined();
+  });
+  it("rejects malformed generated materials", async () => {
+    mockCompletion({ phrases: [{ text: "incomplete" }] });
+    const response = await post("/api/materials/phrases", { word: "book" });
+    expect(response.status).toBe(502);
+  });
+  it("creates an explicitly labelled original reading with supplied vocabulary", async () => {
+    const mock = mockCompletion({
+      title: "A quiet morning",
+      subtitle: "Утро",
+      text: "I read a book.",
+      translation: "Я читаю книгу.",
+    });
+    const response = await post("/api/materials/reading", {
+      words: [{ word: "book", translation: "книга" }],
+    });
+    expect(response.status).toBe(200);
+    const { passage } = await response.json();
+    expect(passage.type).toBe("Учебный текст помощника");
+    expect(passage.id).toMatch(/^ai-/);
+    expect(
+      JSON.parse(mock.mock.calls[0][1].body).messages[1].content,
+    ).toContain("book");
+  });
+  it("rejects an empty reading vocabulary", async () => {
+    const mock = mockCompletion("unused");
+    expect((await post("/api/materials/reading", { words: [] })).status).toBe(
+      400,
+    );
+    expect(mock).not.toHaveBeenCalled();
+  });
+  it("generates an image request with the intended meaning and returns only image data", async () => {
+    const mock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: [{ b64_json: "dGVzdA==" }] }), {
+          status: 200,
+        }),
+    );
+    vi.stubGlobal("fetch", mock);
+    const response = await post("/api/materials/image", {
+      word: "forest",
+      translation: "лес",
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).image).toBe(
+      "data:image/webp;base64,dGVzdA==",
+    );
+    const body = JSON.parse(mock.mock.calls[0][1].body);
+    expect(body.prompt).toContain("forest");
+    expect(body.prompt).toContain("лес");
+    expect(body.output_format).toBe("webp");
+  });
+  it("rate limits costly operations", async () => {
+    const mock = mockCompletion("Ответ");
+    let response: Response;
+    for (let i = 0; i < 13; i++)
+      response = await post("/api/assistant", {
+        question: "Вопрос",
+        context: "forest",
+      });
+    expect(response!.status).toBe(429);
+    expect(mock).toHaveBeenCalledTimes(12);
+  });
+});
