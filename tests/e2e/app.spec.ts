@@ -252,10 +252,8 @@ test("completes a whole study session and saves every result", async ({
   );
   await page.getByRole("button", { name: "Начать практику" }).click();
   for (let i = 0; i < words.length; i++) {
-    const word = words[i].word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     await page
-      .locator(".answer-option")
-      .filter({ hasText: new RegExp(word + "$") })
+      .getByRole("button", { name: words[i].word, exact: true })
       .click();
     await page
       .getByRole("button", {
@@ -630,6 +628,13 @@ test("the helper follows the current card and visible expression", async ({
     .filter({ hasText: /forest$/ })
     .click();
   await page.getByRole("button", { name: "Следующая карточка" }).click();
+  await page.getByRole("button", { name: "Открыть помощника" }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Сначала вспомните сами",
+  );
+  await expect(page.locator(".help-material")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "journey", exact: true }).click();
   await page.getByRole("button", { name: "Открыть помощника" }).click();
   await expect(page.locator(".help-material")).toContainText("journey");
   await page.keyboard.press("Escape");

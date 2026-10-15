@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CATALOG, INITIAL_WORDS } from "../src/data";
 import {
   makeWord,
+  meaningKey,
+  isCorrectAnswer,
   mergeWords,
   optionsFor,
   parseImport,
@@ -32,7 +34,7 @@ describe("vocabulary import and backup", () => {
     expect(words[1].translation).toBe("");
     expect(words[1].concept).toBe("");
   });
-  it("round-trips a backup with status, custom image and scheduling", () => {
+  it("imports vocabulary and images without inventing review history; full backups use parseBackup", () => {
     const word = {
       ...INITIAL_WORDS[0],
       image: "data:image/png;base64,aGVsbG8=",
@@ -46,8 +48,8 @@ describe("vocabulary import and backup", () => {
       word: word.word,
       translation: word.translation,
       image: word.image,
-      dueAt: now,
-      successes: 2,
+      dueAt: 0,
+      successes: 0,
     });
     expect(result.id).not.toBe(word.id);
   });
@@ -93,15 +95,21 @@ describe("practice and scheduling", () => {
     const result = queueFor(INITIAL_WORDS, "new", ["ideas"], now);
     expect(result[0].topic).toBe("ideas");
     expect(
-      result.some((w) => INITIAL_WORDS.some((v) => v.word === w.word)),
+      result.some((w) =>
+        INITIAL_WORDS.some((v) => meaningKey(v) === meaningKey(w)),
+      ),
     ).toBe(false);
   });
   it("graduates after three consecutive correct answers and schedules the next review", () => {
     let w = { ...CATALOG[0] };
-    for (let i = 0; i < 3; i++) w = reviewWord(w, true, now);
+    let at = now;
+    for (let i = 0; i < 3; i++) {
+      w = reviewWord(w, true, at);
+      at = w.dueAt;
+    }
     expect(w.status).toBe("learned");
     expect(w.successes).toBe(3);
-    expect(w.dueAt).toBe(now + 7 * 86400000);
+    expect(w.dueAt).toBe(now + (1 + 3 + 7) * 86400000);
   });
   it("returns a missed learned word to learning and schedules a short retry", () => {
     const result = reviewWord(
@@ -113,13 +121,13 @@ describe("practice and scheduling", () => {
     expect(result.successes).toBe(0);
     expect(result.dueAt).toBe(now + 300000);
   });
-  it("includes all correct synonyms and only distinct distractors", () => {
+  it("includes the target and a verified synonym in four distinct choices", () => {
     const w = CATALOG[0];
     const options = optionsFor(w);
-    for (const answer of [w.word, ...w.synonyms])
-      expect(options).toContain(answer);
+    expect(options).toContain(w.word);
+    expect(options.filter((v) => isCorrectAnswer(w, v))).toHaveLength(2);
     expect(new Set(options).size).toBe(options.length);
-    expect(options.length).toBeGreaterThanOrEqual(4);
+    expect(options.length).toBe(4);
   });
   it("calculates an actual streak, including yesterday when today has no practice", () => {
     const logs = [

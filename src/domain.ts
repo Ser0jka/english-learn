@@ -3,7 +3,6 @@ import {
   INITIAL_WORDS,
   PHRASES,
   type Word,
-  type Mode,
   type Topic,
   type Phrase,
   type Passage,
@@ -12,6 +11,7 @@ export interface PracticeLog {
   at: number;
   wordId: string;
   correct: boolean;
+  kind?: "scheduled";
 }
 export interface Store {
   version: 1;
@@ -21,6 +21,7 @@ export interface Store {
   phraseIds: string[];
   logs: PracticeLog[];
   interests: Topic[];
+  dailyGoal?: number;
 }
 export const STORAGE_KEY = "lexi.workspace.v1";
 export const emptyStore = (): Store => ({
@@ -31,9 +32,23 @@ export const emptyStore = (): Store => ({
   phraseIds: [],
   logs: [],
   interests: [],
+  dailyGoal: 10,
 });
-export const normalize = (s: string) =>
-  s.trim().toLocaleLowerCase("en").replace(/\s+/g, " ");
+import { normalize, meaningKey, reviewWord, isEligible } from "./learning";
+export {
+  normalize,
+  meaningKey,
+  reviewWord,
+  queueFor,
+  optionsFor,
+  acceptedAnswers,
+  isCorrectAnswer,
+  learningState,
+  setWordStatus,
+  canPractice,
+  maskedContext,
+  maskedDefinition,
+} from "./learning";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const shortText = (
@@ -61,6 +76,16 @@ const httpsUrl = (value: unknown): value is string => {
 export function validWord(value: unknown): value is Word {
   if (!isRecord(value)) return false;
   return (
+    (value.partOfSpeech === undefined ||
+      ["noun", "verb", "adjective", "adverb", "phrase", "unknown"].includes(
+        value.partOfSpeech as string,
+      )) &&
+    (value.lastReviewedAt === undefined || timestamp(value.lastReviewedAt)) &&
+    (value.lapses === undefined ||
+      (Number.isSafeInteger(value.lapses) && (value.lapses as number) >= 0)) &&
+    (value.mastery === undefined ||
+      value.mastery === "manual" ||
+      value.mastery === "scheduled") &&
     shortText(value.id, 200) &&
     shortText(value.word, 100) &&
     /[a-z]/i.test(value.word) &&
@@ -105,8 +130,7 @@ export function validateStore(value: unknown): Store {
     value.words.length > 10000 ||
     !value.words.every(validWord) ||
     new Set(value.words.map((w) => w.id)).size !== value.words.length ||
-    new Set(value.words.map((w) => normalize(w.word))).size !==
-      value.words.length ||
+    new Set(value.words.map(meaningKey)).size !== value.words.length ||
     !Array.isArray(value.phraseIds) ||
     !value.phraseIds.every((v) => shortText(v, 200)) ||
     !Array.isArray(value.logs) ||
@@ -116,8 +140,13 @@ export function validateStore(value: unknown): Store {
         isRecord(l) &&
         timestamp(l.at) &&
         shortText(l.wordId, 200) &&
-        typeof l.correct === "boolean",
+        typeof l.correct === "boolean" &&
+        (l.kind === undefined || l.kind === "scheduled"),
     ) ||
+    (value.dailyGoal !== undefined &&
+      (!Number.isSafeInteger(value.dailyGoal) ||
+        (value.dailyGoal as number) < 0 ||
+        (value.dailyGoal as number) > 50)) ||
     !Array.isArray(value.interests) ||
     !value.interests.every((i) =>
       ["everyday", "travel", "ideas"].includes(i as string),
@@ -151,6 +180,9 @@ export function validateStore(value: unknown): Store {
     interests: [...new Set(value.interests as Topic[])],
     customPhrases,
     customPassages,
+    ...(value.dailyGoal === undefined
+      ? {}
+      : { dailyGoal: value.dailyGoal as number }),
   };
 }
 export function loadStore(): { state: Store; error: string } {
@@ -197,7 +229,11 @@ export function removeWord(state: Store, id: string): Store {
   if (!word) return state;
   const associated = new Set(
     [...PHRASES, ...state.customPhrases]
-      .filter((p) => normalize(p.text) === normalize(word.word))
+      .filter(
+        (p) =>
+          normalize(p.text) === normalize(word.word) &&
+          normalize(p.translation) === normalize(word.translation),
+      )
       .map((p) => p.id),
   );
   return {
@@ -206,79 +242,10 @@ export function removeWord(state: Store, id: string): Store {
     phraseIds: state.phraseIds.filter((p) => !associated.has(p)),
   };
 }
-export function queueFor(
-  words: Word[],
-  mode: Mode,
-  interests: Topic[] = [],
-  now = Date.now(),
-): Word[] {
-  if (mode === "new")
-    return CATALOG.filter(
-      (w) => !words.some((v) => normalize(v.word) === normalize(w.word)),
-    ).sort(
-      (a, b) =>
-        Number(interests.includes(b.topic)) -
-          Number(interests.includes(a.topic)) || a.addedAt - b.addedAt,
-    );
-  return words
-    .filter((w) =>
-      mode === "learn"
-        ? w.status === "learning"
-        : (w.status === "learned" || w.dueAt > 0) && w.dueAt <= now,
-    )
-    .sort((a, b) => a.dueAt - b.dueAt);
-}
-export function reviewWord(
-  word: Word,
-  correct: boolean,
-  now = Date.now(),
-): Word {
-  const successes = correct ? word.successes + 1 : 0;
-  return {
-    ...word,
-    successes,
-    status:
-      correct && successes >= 3
-        ? "learned"
-        : correct
-          ? word.status
-          : "learning",
-    dueAt:
-      now +
-      (correct
-        ? [1, 3, 7, 14, 30][Math.min(Math.max(successes - 1, 0), 4)] * 86400000
-        : 5 * 60000),
-  };
-}
-export function optionsFor(word: Word): string[] {
-  const correct = [
-    ...new Map(
-      [word.word, ...word.synonyms]
-        .filter((v) => v.trim())
-        .map((v) => [normalize(v), v]),
-    ).values(),
-  ];
-  const wrong = CATALOG.filter(
-    (w) => !correct.includes(w.word) && w.concept !== word.concept,
-  ).map((w) => w.word);
-  const offset =
-    [...word.id].reduce((n, c) => n + c.charCodeAt(0), 0) % wrong.length;
-  const incorrect = [...wrong.slice(offset), ...wrong.slice(0, offset)].slice(
-    0,
-    Math.max(2, 4 - correct.length),
-  );
-  return [...correct, ...incorrect]
-    .map((s, i) => ({
-      s,
-      n: (s.charCodeAt(0) * 13 + s.length * 7 + i * 19) % 101,
-    }))
-    .sort((a, b) => a.n - b.n)
-    .map((v) => v.s);
-}
 export function mergeWords(existing: Word[], incoming: Word[]) {
-  const seen = new Set(existing.map((w) => normalize(w.word)));
+  const seen = new Set(existing.map(meaningKey));
   const added = incoming.filter((w) => {
-    const key = normalize(w.word);
+    const key = meaningKey(w);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -334,7 +301,12 @@ export function makeWord(
   translation: string,
   status: Word["status"] = "learning",
 ): Word {
-  const known = CATALOG.find((w) => normalize(w.word) === normalize(word));
+  const known = CATALOG.find(
+    (w) =>
+      normalize(w.word) === normalize(word) &&
+      (!translation.trim() ||
+        normalize(w.translation) === normalize(translation)),
+  );
   return {
     ...(known || {
       phonetic: "",
@@ -345,13 +317,15 @@ export function makeWord(
       concept: "",
       level: "—",
       topic: "everyday" as const,
+      partOfSpeech: "unknown" as const,
     }),
     id: crypto.randomUUID(),
     word: normalize(word),
     translation: translation.trim() || known?.translation || "",
     status,
-    successes: status === "learned" ? 3 : 0,
-    dueAt: 0,
+    successes: 0,
+    mastery: status === "learned" ? "manual" : undefined,
+    dueAt: status === "learned" ? Date.now() + 86400000 : 0,
     addedAt: Date.now(),
   };
 }
@@ -441,7 +415,38 @@ export function parseImport(text: string): Word[] {
       typeof row.translation === "string" ? row.translation : "",
       status,
     );
-    if (validWord(row)) return { ...row, id: result.id, word: result.word };
+    // A list imports vocabulary and self-assessed status, never manufactured review history.
+    for (const field of [
+      "partOfSpeech",
+      "synonyms",
+      "definition",
+      "example",
+      "exampleRu",
+      "concept",
+      "phonetic",
+      "image",
+    ] as const) {
+      if (row[field] !== undefined)
+        Object.assign(result, { [field]: row[field] });
+    }
+    if (!validWord(result))
+      throw new Error(
+        `Строка ${i + 1}: проверьте часть речи, синонимы, контекст или изображение.`,
+      );
+    if (validWord(row))
+      return {
+        ...row,
+        ...{
+          id: result.id,
+          word: result.word,
+          status: result.status,
+          successes: 0,
+          dueAt: result.dueAt,
+          lastReviewedAt: undefined,
+          lapses: 0,
+          mastery: result.mastery,
+        },
+      };
     return result;
   });
   if (!words.length) throw new Error("В файле нет слов.");
@@ -543,4 +548,91 @@ export function highlightText(
   }
   if (position < text.length) parts.push({ text: text.slice(position) });
   return parts;
+}
+
+// A single immutable transaction keeps attempts and the schedule consistent, including double clicks.
+export function recordPractice(
+  state: Store,
+  snapshot: Word,
+  correct: boolean,
+  now = Date.now(),
+  introduce = false,
+): Store {
+  const existing =
+    state.words.find((w) => w.id === snapshot.id) ||
+    state.words.find((w) => meaningKey(w) === meaningKey(snapshot));
+  if (!existing && !introduce) return state;
+  if (
+    existing &&
+    (meaningKey(existing) !== meaningKey(snapshot) ||
+      existing.status !== snapshot.status ||
+      existing.successes !== snapshot.successes ||
+      JSON.stringify([
+        existing.synonyms,
+        existing.example,
+        existing.concept,
+        existing.image,
+      ]) !==
+        JSON.stringify([
+          snapshot.synonyms,
+          snapshot.example,
+          snapshot.concept,
+          snapshot.image,
+        ]) ||
+      existing.dueAt !== snapshot.dueAt ||
+      existing.lastReviewedAt !== snapshot.lastReviewedAt ||
+      !isEligible(existing, now))
+  )
+    return state;
+  const source = existing || {
+    ...snapshot,
+    id: crypto.randomUUID(),
+    addedAt: now,
+  };
+  const updated = reviewWord(source, correct, now);
+  if (updated === source) return state;
+  return {
+    ...state,
+    words: existing
+      ? state.words.map((w) => (w.id === existing.id ? updated : w))
+      : [...state.words, updated],
+    logs: [
+      ...state.logs,
+      { at: now, wordId: updated.id, correct, kind: "scheduled" },
+    ],
+  };
+}
+export function progressStats(state: Store, now = Date.now()) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - 6);
+  const logs = state.logs.filter((l) => l.at <= now);
+  const today = logs.filter((l) => localDay(l.at) === localDay(now));
+  const recent = logs.filter((l) => l.at >= start.getTime());
+  const due = state.words.filter(
+    (w) => (w.dueAt > 0 || w.status === "learned") && w.dueAt <= now,
+  );
+  return {
+    todayWords: new Set(today.map((l) => l.wordId)).size,
+    todayAttempts: today.length,
+    recentAttempts: recent.length,
+    accuracy: recent.length
+      ? Math.round(
+          (recent.filter((l) => l.correct).length / recent.length) * 100,
+        )
+      : null,
+    due: due.length,
+    learning: state.words.filter(
+      (w) => w.status === "learning" && !due.includes(w),
+    ).length,
+    learned: state.words.filter(
+      (w) => w.status === "learned" && !due.includes(w),
+    ).length,
+    confirmed: state.words.filter(
+      (w) => w.status === "learned" && w.mastery === "scheduled",
+    ).length,
+    manual: state.words.filter(
+      (w) => w.status === "learned" && w.mastery !== "scheduled",
+    ).length,
+  };
 }

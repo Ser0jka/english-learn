@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -8,7 +8,7 @@ import {
   ChevronRight,
   CircleHelp,
   CloudDownload,
-  Flame,
+  Clock3,
   Flower2,
   Layers3,
   LayoutGrid,
@@ -21,7 +21,6 @@ import {
   Settings2,
   Sparkles,
   Sprout,
-  TrendingUp,
   Volume2,
   X,
   RotateCcw,
@@ -50,7 +49,11 @@ import {
   queueFor,
   speak,
   STORAGE_KEY,
-  streak,
+  progressStats,
+  learningState,
+  setWordStatus,
+  canPractice,
+  meaningKey,
   type Store,
 } from "./domain";
 import type { HelpContext, NoticeAction } from "./types";
@@ -59,6 +62,8 @@ import { AddWords, WordEditor } from "./components/WordForms";
 import { Flashcards, Phrases, Reading } from "./components/Study";
 import Help from "./components/Help";
 import Modal from "./components/Modal";
+import { useStudyClock } from "./useStudyClock";
+
 const NAV = [
   { id: "home" as Page, label: "Обзор", icon: LayoutGrid },
   { id: "cards" as Page, label: "Карточки", icon: Layers3 },
@@ -100,6 +105,15 @@ function getPage(): Page {
 export default function App() {
   const [initial] = useState(loadStore);
   const [store, setStore] = useState<Store>(initial.state);
+  const spellingCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const w of store.words)
+      counts.set(normalize(w.word), (counts.get(normalize(w.word)) || 0) + 1);
+    return counts;
+  }, [store.words]);
+  const now = useStudyClock(store.words);
+  const stats = progressStats(store, now);
+  const dailyGoal = store.dailyGoal ?? 10;
   const [page, setPage] = useState<Page>(getPage);
   const [mode, setMode] = useState<Mode>("learn");
   const [addOpen, setAddOpen] = useState(false);
@@ -216,6 +230,7 @@ export default function App() {
     };
   }, [mobile]);
   function go(next: Page) {
+    if (next === "cards") setCurrentHelp({ assessmentLocked: true });
     setPage(next);
     window.location.hash = next;
     setMobile(false);
@@ -237,20 +252,17 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     notify("Словарь и весь прогресс сохранены в резервную копию");
   }
-  const learning = store.words.filter((w) => w.status === "learning").length;
-  const learned = store.words.length - learning;
-  const today = store.logs.filter(
-    (l) => localDay(l.at) === localDay(Date.now()),
-  );
-  const daily = Math.min(today.length, 10);
+  const learning = stats.learning;
+  const learned = stats.learned;
+  const daily = Math.min(stats.todayWords, dailyGoal);
   const activeNav = NAV.find((n) => n.id === page)!;
   const shownWords = store.words
     .filter(
       (w) =>
         (wordFilter === "all" ||
           (wordFilter === "incomplete"
-            ? !(w.image || w.concept) || !w.translation
-            : w.status === wordFilter)) &&
+            ? !canPractice(w)
+            : learningState(w, now) === wordFilter)) &&
         (!query ||
           [w.word, w.translation].some((v) =>
             normalize(v).includes(normalize(query)),
@@ -261,6 +273,7 @@ export default function App() {
     store,
     setStore,
     mode,
+    now,
     notify,
     onHelp: setHelp,
     onContext: setCurrentHelp,
@@ -331,24 +344,31 @@ export default function App() {
             <span className="tiny-sun">
               <Flower2 size={19} />
             </span>
-            Маленькие шаги,
-            <br />
-            большие перемены.
+            В своём ритме
           </div>
           <div className="daily-label">
-            <span>Практика сегодня</span>
+            <span>{dailyGoal ? "Цель на сегодня" : "Практика сегодня"}</span>
             <b>
-              {daily}
-              <span> / 10</span>
+              {stats.todayWords}
+              {dailyGoal > 0 && <span> / {dailyGoal}</span>}
             </b>
           </div>
-          <div className="daily-track">
-            <span style={{ width: `${daily * 10}%` }} />
-          </div>
+          {dailyGoal > 0 && (
+            <div
+              className="daily-track"
+              role="progressbar"
+              aria-label="Разных значений отработано сегодня"
+              aria-valuemin={0}
+              aria-valuemax={dailyGoal}
+              aria-valuenow={daily}
+            >
+              <span style={{ width: `${(daily / dailyGoal) * 100}%` }} />
+            </div>
+          )}
           <p>
-            {daily === 10
-              ? "Вы нашли время для себя. Так держать!"
-              : "Всего 10 карточек. Вы справитесь."}
+            {dailyGoal > 0 && daily >= dailyGoal
+              ? "Цель выполнена. Можно закончить на сегодня."
+              : "Считаем разные значения, а не повторные нажатия. Цель можно изменить или отключить."}
           </p>
         </div>
         <div className="sidebar-bottom">
@@ -421,7 +441,13 @@ export default function App() {
             </button>
             <button
               className="top-help"
-              onClick={() => setHelp(currentHelp)}
+              onClick={() =>
+                setHelp(
+                  page === "cards" && currentHelp.assessmentLocked !== false
+                    ? { assessmentLocked: true }
+                    : currentHelp,
+                )
+              }
               aria-label="Открыть помощника"
             >
               <CircleHelp size={19} />
@@ -436,14 +462,18 @@ export default function App() {
                   key={m.id}
                   aria-pressed={mode === m.id}
                   className={mode === m.id ? "active" : ""}
-                  onClick={() => setMode(m.id)}
+                  onClick={() => {
+                    if (page === "cards")
+                      setCurrentHelp({ assessmentLocked: true });
+                    setMode(m.id);
+                  }}
                 >
                   <m.icon size={16} />
                   {m.label}
                   {m.id === "review" &&
-                    queueFor(store.words, "review").length > 0 && (
+                    queueFor(store.words, "review", [], now).length > 0 && (
                       <span className="mode-count">
-                        {queueFor(store.words, "review").length}
+                        {queueFor(store.words, "review", [], now).length}
                       </span>
                     )}
                 </button>
@@ -492,11 +522,9 @@ export default function App() {
               </div>
             ) : page === "home" ? (
               <div className="streak-pill">
-                <Flame size={16} />
-                <strong>{streak(store.logs)}</strong>
-                <span>
-                  {plural(streak(store.logs), ["день", "дня", "дней"])} практики
-                </span>
+                <Clock3 size={16} />
+                <strong>{stats.todayWords}</strong>
+                <span>значений сегодня</span>
               </div>
             ) : null}
           </div>
@@ -548,6 +576,7 @@ export default function App() {
             <Home
               store={store}
               mode={mode}
+              now={now}
               go={go}
               onAdd={() => setAddOpen(true)}
               onEdit={setEdit}
@@ -585,13 +614,12 @@ export default function App() {
                     { id: "all", label: `Все · ${store.words.length}` },
                     { id: "learning", label: `Учу · ${learning}` },
                     { id: "learned", label: `Выучил · ${learned}` },
-                    ...(store.words.some(
-                      (w) => !(w.concept || w.image) || !w.translation,
-                    )
+                    { id: "due", label: `Пора повторить · ${stats.due}` },
+                    ...(store.words.some((w) => !canPractice(w))
                       ? [
                           {
                             id: "incomplete",
-                            label: `Без карточки · ${store.words.filter((w) => !(w.concept || w.image) || !w.translation).length}`,
+                            label: `Без карточки · ${store.words.filter((w) => !canPractice(w)).length}`,
                           },
                         ]
                       : []),
@@ -616,7 +644,7 @@ export default function App() {
                     <button
                       className="word-tile-main"
                       onClick={() => setEdit(w)}
-                      aria-label={`Открыть слово ${w.word}`}
+                      aria-label={`Открыть слово ${w.word}${(spellingCounts.get(normalize(w.word)) || 0) > 1 ? ` — ${w.translation}` : ""}`}
                     >
                       <div className="word-tile-art">
                         {w.image ? (
@@ -625,19 +653,33 @@ export default function App() {
                           <WordArt concept={w.concept} />
                         )}
                         <span
-                          className={`word-status ${w.status === "learned" ? "known" : "learning"}`}
+                          className={`word-status ${learningState(w, now) === "due" ? "due" : w.status === "learned" ? "known" : "learning"}`}
                         >
                           {w.status === "learned" ? (
                             <Check size={12} />
                           ) : (
                             <span className="status-dot learning" />
                           )}
-                          {w.status === "learned" ? "Выучил" : "Учу"}
+                          {learningState(w, now) === "due"
+                            ? "Пора повторить"
+                            : w.status === "learned"
+                              ? "Выучил"
+                              : "Учу"}
                         </span>
                       </div>
                       <div className="word-tile-copy">
                         <h3 lang="en">{w.word}</h3>
                         <p>{w.translation || "Добавьте перевод"}</p>
+                        <p className="word-review-note">
+                          {w.mastery === "scheduled"
+                            ? "Подтверждено по расписанию"
+                            : w.status === "learned"
+                              ? "Отмечено вами; проверка ещё нужна"
+                              : `Успешных проверок подряд: ${Math.min(w.successes, 3)} / 3`}
+                          {w.dueAt > now
+                            ? ` · ${new Date(w.dueAt).toLocaleDateString("ru-RU")}`
+                            : ""}
+                        </p>
                         <span className="phonetic">
                           {w.phonetic
                             ? `/${w.phonetic}/`
@@ -656,21 +698,18 @@ export default function App() {
                             ...s,
                             words: s.words.map((v) =>
                               v.id === w.id
-                                ? {
-                                    ...v,
-                                    status:
-                                      v.status === "learning"
-                                        ? "learned"
-                                        : "learning",
-                                    successes: v.status === "learning" ? 3 : 0,
-                                    dueAt: 0,
-                                  }
+                                ? setWordStatus(
+                                    v,
+                                    v.status === "learning"
+                                      ? "learned"
+                                      : "learning",
+                                  )
                                 : v,
                             ),
                           }));
                           notify(
                             w.status === "learning"
-                              ? "Слово отмечено как выученное"
+                              ? "Отмечено как выученное по самооценке. Проверка — через день."
                               : "Слово возвращено в изучение",
                           );
                         }}
@@ -680,7 +719,9 @@ export default function App() {
                         ) : (
                           <RotateCcw size={14} />
                         )}
-                        {w.status === "learning" ? "Уже знаю" : "Повторить"}
+                        {w.status === "learning"
+                          ? "Уже знаю"
+                          : "Вернуть в изучение"}
                       </button>
                       <button
                         className="icon-button"
@@ -715,7 +756,7 @@ export default function App() {
                       ? "Попробуйте другой запрос или сбросьте фильтры."
                       : store.words.length
                         ? "Откройте все слова, чтобы продолжить практику."
-                        : "Добавьте первое слово или загрузите список. Слова с переводом и картинкой сразу попадут в карточки."}
+                        : "Добавьте первое слово или загрузите список. Для карточек нужны перевод, часть речи и картинка или пример."}
                   </p>
                   {store.words.length > 0 && (
                     <button
@@ -768,6 +809,7 @@ export default function App() {
       {edit && (
         <WordEditor
           word={edit}
+          words={store.words}
           setStore={setStore}
           notify={notify}
           onClose={() => setEdit(null)}
@@ -787,7 +829,9 @@ export default function App() {
           <div className="form-body">
             <span className="eyebrow">ЧТО ВАМ БЛИЖЕ?</span>
             <p className="muted">
-              Выбранные темы будут первыми в режиме «Новые слова».
+              Выбранные темы будут первыми в режиме «Новые слова». Это
+              фиксированная редакционная подборка, без ИИ и оценки вашего
+              уровня.
             </p>
             <div className="interest-options">
               {(Object.entries(TOPICS) as [Topic, string][]).map(
@@ -822,6 +866,39 @@ export default function App() {
                 ),
               )}
             </div>
+            <label>
+              Ежедневная цель (разных значений)
+              <select
+                value={dailyGoal}
+                onChange={(e) =>
+                  setStore((s) => ({ ...s, dailyGoal: Number(e.target.value) }))
+                }
+              >
+                {[
+                  0,
+                  5,
+                  10,
+                  15,
+                  20,
+                  30,
+                  50,
+                  ...(![0, 5, 10, 15, 20, 30, 50].includes(dailyGoal)
+                    ? [dailyGoal]
+                    : []),
+                ]
+                  .sort((a, b) => a - b)
+                  .map((n) => (
+                    <option key={n} value={n}>
+                      {n === 0 ? "Без цели" : n}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <p className="muted small">
+              Правильный и ошибочный самостоятельный ответ учитываются как
+              практика. Повтор одного значения в тот же день не увеличивает
+              цель; чтение и справка не меняют владение словом.
+            </p>
             <div className="privacy-note">
               <ShieldCheck size={20} />
               <div>
@@ -880,6 +957,7 @@ export default function App() {
 function Home({
   store,
   mode,
+  now,
   go,
   onAdd,
   onEdit,
@@ -888,6 +966,7 @@ function Home({
 }: {
   store: Store;
   mode: Mode;
+  now: number;
   go: (page: Page) => void;
   onAdd: () => void;
   onEdit: (w: Word) => void;
@@ -896,18 +975,14 @@ function Home({
 }) {
   const learning = store.words.filter((w) => w.status === "learning");
   const learned = store.words.filter((w) => w.status === "learned");
-  const due = queueFor(store.words, "review");
-  const today = store.logs.filter(
-    (l) => localDay(l.at) === localDay(Date.now()),
-  );
-  const accuracy = store.logs.length
-    ? Math.round(
-        (store.logs.filter((l) => l.correct).length / store.logs.length) * 100,
-      )
-    : null;
+  const due = queueFor(store.words, "review", [], now);
+  const stats = progressStats(store, now);
+  const accuracy = stats.accuracy;
   const discovery =
     queueFor(store.words, "new", store.interests)[0] || CATALOG[14];
-  const existing = store.words.find((w) => w.word === discovery.word);
+  const existing = store.words.find(
+    (w) => meaningKey(w) === meaningKey(discovery),
+  );
   const features = [
     {
       page: "cards" as Page,
@@ -917,7 +992,7 @@ function Home({
       tag: "КАРТОЧКИ",
       class: "visual",
       art: "forest",
-      count: `${queueFor(store.words, mode, store.interests).filter((w) => w.concept || w.image).length} в очереди`,
+      count: `${queueFor(store.words, mode, store.interests, now).filter(canPractice).length} в очереди`,
     },
     {
       page: "phrases" as Page,
@@ -927,7 +1002,7 @@ function Home({
       tag: "СЛОВА В ВЫРАЖЕНИЯХ",
       class: "phrases",
       art: "book",
-      count: `${PHRASES.length} выражений`,
+      count: `${PHRASES.length + store.customPhrases.length} выражений`,
     },
     {
       page: "reading" as Page,
@@ -937,7 +1012,7 @@ function Home({
       tag: "ЧТЕНИЕ",
       class: "reading",
       art: "window",
-      count: "3 истории",
+      count: `${3 + store.customPassages.length} историй`,
     },
   ];
   return (
@@ -986,7 +1061,7 @@ function Home({
             <Library size={21} strokeWidth={1.5} />
           </span>
           <div>
-            <span className="stat-label">Слов в коллекции</span>
+            <span className="stat-label">Значений в коллекции</span>
             <div className="stat-value">
               {store.words.length}
               <span>ваш личный словарь</span>
@@ -1005,16 +1080,13 @@ function Home({
             <Sprout size={22} strokeWidth={1.5} />
           </span>
           <div>
-            <span className="stat-label">Уже с вами</span>
+            <span className="stat-label">Выучил сейчас</span>
             <div className="stat-value">
-              {learned.length}
-              <span>{learning.length} ещё изучаете</span>
+              {stats.learned}
+              <span>
+                {stats.learning} учу · {stats.due} пора повторить
+              </span>
             </div>
-          </div>
-          <div className="mini-bars" aria-hidden="true">
-            {[24, 36, 31, 44, 51, 65, 76].map((h, i) => (
-              <i key={i} style={{ height: `${h}%`, opacity: 0.3 + i * 0.1 }} />
-            ))}
           </div>
         </div>
         <div className="stat-card panel">
@@ -1022,19 +1094,61 @@ function Home({
             <Target size={22} strokeWidth={1.5} />
           </span>
           <div>
-            <span className="stat-label">Точность ответов</span>
+            <span className="stat-label">Точность за 7 дней</span>
             <div className="stat-value">
               {accuracy === null ? "—" : `${accuracy}%`}
               <span>
                 {accuracy === null
                   ? "начните первую практику"
-                  : `${today.length} ответов сегодня`}
+                  : `${stats.recentAttempts} ответов · ${stats.todayWords} значений сегодня`}
               </span>
             </div>
           </div>
-          <TrendingUp className="stat-trend" size={29} strokeWidth={1} />
         </div>
       </section>
+      <section
+        className="learning-summary panel"
+        aria-label="Как считается прогресс"
+      >
+        <div>
+          <strong>Пора повторить: {stats.due}</strong>
+          <p>
+            Статусы выше не пересекаются: «Пора повторить» выделяется из «Учу» и
+            «Выучил», когда наступает срок.
+          </p>
+          <button className="text-button gold" onClick={() => go("cards")}>
+            Открыть практику выбранного режима <ArrowRight size={15} />
+          </button>
+        </div>
+        <div>
+          <strong>Подтверждено по расписанию: {stats.confirmed}</strong>
+          <p>
+            {stats.manual} отмечено как выученное без трёх подтверждённых
+            проверок. Самооценка и стартовые примеры не считаются
+            доказательством запоминания.
+          </p>
+        </div>
+        <div>
+          <strong>
+            Сегодня: {stats.todayWords}{" "}
+            {plural(stats.todayWords, ["значение", "значения", "значений"])}
+          </strong>
+          <p>
+            Самостоятельных ответов: {stats.todayAttempts}. Цель:{" "}
+            {(store.dailyGoal ?? 10) === 0
+              ? "отключена"
+              : `${store.dailyGoal ?? 10} разных значений`}
+            . Ошибки учитываются как практика, а не как выученные слова.
+          </p>
+        </div>
+      </section>
+      {mode === "new" && (
+        <p className="content-note">
+          Новые слова — фиксированная редакционная подборка из {CATALOG.length}{" "}
+          значений. Выбранные темы идут первыми; частотность и ваш уровень
+          автоматически не оцениваются.
+        </p>
+      )}
       <section className="practice-section">
         <div className="section-heading">
           <div>
@@ -1106,12 +1220,16 @@ function Home({
                   <span>{w.translation}</span>
                 </div>
                 <span
-                  className={`word-status ${w.status === "learned" ? "known" : "learning"}`}
+                  className={`word-status ${learningState(w, now) === "due" ? "due" : w.status === "learned" ? "known" : "learning"}`}
                 >
                   <span
                     className={`status-dot ${w.status === "learned" ? "known" : "learning"}`}
                   />
-                  {w.status === "learned" ? "Выучил" : "Изучаю"}
+                  {learningState(w, now) === "due"
+                    ? "Пора повторить"
+                    : w.status === "learned"
+                      ? "Выучил"
+                      : "Изучаю"}
                 </span>
                 <ChevronRight size={17} />
               </button>
@@ -1126,7 +1244,15 @@ function Home({
           {due.length > 0 && (
             <div className="review-reminder">
               <RotateCcw size={15} />
-              <span>{due.length} знакомых слова ждут повторения</span>
+              <span>
+                {due.length}{" "}
+                {plural(due.length, [
+                  "значение ждёт",
+                  "значения ждут",
+                  "значений ждут",
+                ])}{" "}
+                повторения
+              </span>
               <span>Выберите «Повторяю» сверху</span>
             </div>
           )}
@@ -1135,11 +1261,11 @@ function Home({
           <div className="discovery-top">
             <span className="eyebrow">
               <Sparkles size={14} />
-              МАЛЕНЬКОЕ ОТКРЫТИЕ
+              ИЗ РЕДАКЦИОННОЙ ПОДБОРКИ
             </span>
             <button
               className="icon-button"
-              aria-label="Прослушать слово дня"
+              aria-label="Прослушать слово из подборки"
               onClick={() => {
                 if (!speak(discovery.word))
                   notify("Озвучка не поддерживается браузером.");

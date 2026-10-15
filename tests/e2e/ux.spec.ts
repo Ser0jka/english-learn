@@ -124,6 +124,8 @@ test("missing illustrations and future review queues provide useful next actions
       ...w,
       concept: "",
       image: undefined,
+      example: "",
+      definition: "",
       dueAt: Date.now() + 86400000,
     }));
     localStorage.setItem(key, JSON.stringify(s));
@@ -215,10 +217,9 @@ test("correct feedback exposes accessible progress and moves focus to the next q
   await page.goto("/#cards");
   await page.getByRole("button", { name: "forest", exact: true }).click();
   await accessible(page);
-  await expect(page.getByRole("progressbar")).toHaveAttribute(
-    "aria-valuenow",
-    "1",
-  );
+  await expect(
+    page.getByRole("progressbar", { name: "Пройдено карточек" }),
+  ).toHaveAttribute("aria-valuenow", "1");
   await page.getByRole("button", { name: "Следующая карточка" }).click();
   await expect(
     page.getByRole("heading", { name: "Какое слово здесь спрятано?" }),

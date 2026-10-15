@@ -16,12 +16,17 @@ import {
   makeWord,
   mergeWords,
   normalize,
+  meaningKey,
+  setWordStatus,
+  validWord,
   parseImport,
   parseBackup,
   removeWord,
   speak,
 } from "../domain";
 import type { StudyProps } from "../types";
+import { PARTS_OF_SPEECH } from "../learning";
+import type { PartOfSpeech } from "../data";
 import Modal from "./Modal";
 import {
   compactImage,
@@ -83,7 +88,7 @@ export function AddWords({
     }
     setStore((s) => ({ ...s, words: mergeWords(s.words, words).words }));
     const created = words.find(
-      (w) => !store.words.some((v) => normalize(v.word) === normalize(w.word)),
+      (w) => !store.words.some((v) => meaningKey(v) === meaningKey(w)),
     );
     notify(
       `Добавлено слов: ${result.added}${result.duplicates ? ` · Уже были в словаре: ${result.duplicates}` : ""}`,
@@ -250,8 +255,10 @@ export function AddWords({
             </div>
           </fieldset>
           <p className="muted small">
-            Для знакомых слов из подборки иллюстрация и пример добавятся
-            автоматически. Для остальных можно загрузить картинку в словаре.
+            Одна запись — одно значение. Например, book — «книга» и book —
+            «бронировать» можно добавить отдельно. Материалы подставляются
+            только при совпадении значения; для остальных добавьте свой контекст
+            или картинку.
           </p>
           {error && (
             <p className="form-error" role="alert">
@@ -414,18 +421,21 @@ export function AddWords({
 }
 export function WordEditor({
   word,
+  words,
   setStore,
   notify,
   onClose,
   onHelp,
 }: {
   word: Word;
+  words: Word[];
   setStore: StudyProps["setStore"];
   notify: StudyProps["notify"];
   onClose: () => void;
   onHelp: () => void;
 }) {
   const [edit, setEdit] = useState({ ...word });
+  const [synonymText, setSynonymText] = useState(word.synonyms.join(", "));
   const connection = useServiceStatus("image");
   const { available } = connection;
   const [generating, setGenerating] = useState(false);
@@ -488,7 +498,7 @@ export function WordEditor({
   return (
     <Modal
       title={word.word}
-      subtitle={word.phonetic ? `/${word.phonetic}/` : undefined}
+      subtitle={`${word.phonetic ? `/${word.phonetic}/ · ` : ""}${word.translation}`}
       onClose={onClose}
     >
       <div className="form-body">
@@ -517,6 +527,11 @@ export function WordEditor({
             e.target.value = "";
           }}
         />
+        <p className="muted small">
+          Для самостоятельной проверки выбирайте иллюстрации без английских
+          подписей. Приложение не распознаёт и не удаляет текст на ваших
+          изображениях.
+        </p>
         <ServiceNotice connection={connection} kind="image" />
         {available && (
           <button
@@ -549,12 +564,7 @@ export function WordEditor({
             <select
               value={edit.status}
               onChange={(e) =>
-                setEdit({
-                  ...edit,
-                  status: e.target.value as Status,
-                  successes: e.target.value === "learned" ? 3 : 0,
-                  dueAt: 0,
-                })
+                setEdit(setWordStatus(edit, e.target.value as Status))
               }
             >
               <option value="learning">Учу сейчас</option>
@@ -581,6 +591,67 @@ export function WordEditor({
             </select>
           </label>
         </div>
+        <p className="muted small">
+          Ручная отметка «Выучил» — самооценка, а не результат тестов; проверка
+          назначается через день. Изменение перевода создаёт другое значение и
+          сбрасывает прежний прогресс при сохранении.
+        </p>
+        <p className="muted small">
+          Для зачётной практики укажите часть речи: это помогает составить
+          однородные варианты, по которым нельзя угадать ответ только по
+          грамматике. Для неизвестного значения она не определяется
+          автоматически.
+        </p>
+        <label>
+          Часть речи
+          <select
+            value={edit.partOfSpeech || "unknown"}
+            onChange={(e) =>
+              setEdit({ ...edit, partOfSpeech: e.target.value as PartOfSpeech })
+            }
+          >
+            {(Object.entries(PARTS_OF_SPEECH) as [PartOfSpeech, string][]).map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+        <label>
+          Синонимы для этого значения
+          <input
+            maxLength={2000}
+            value={synonymText}
+            onChange={(e) => setSynonymText(e.target.value)}
+            placeholder="Например, woods, woodland"
+          />
+        </label>
+        <p className="muted small">
+          До 20 вариантов через запятую. Укажите только подходящие к этому
+          значению слова. Они считаются правильными; все остальные значения
+          одного написания учатся отдельно.
+        </p>
+        <label>
+          Пример на английском
+          <textarea
+            maxLength={4000}
+            value={edit.example}
+            onChange={(e) => setEdit({ ...edit, example: e.target.value })}
+            placeholder="Пример должен содержать изучаемое слово. В задании оно будет скрыто."
+            rows={3}
+          />
+        </label>
+        <label>
+          Перевод примера
+          <textarea
+            maxLength={4000}
+            value={edit.exampleRu}
+            onChange={(e) => setEdit({ ...edit, exampleRu: e.target.value })}
+            rows={2}
+          />
+        </label>
         {word.example && (
           <div className="example-box">
             <button
@@ -630,9 +701,60 @@ export function WordEditor({
                 setError("Добавьте перевод.");
                 return;
               }
+              const changed = meaningKey(edit) !== meaningKey(word);
+              const synonyms = [
+                ...new Map(
+                  synonymText
+                    .split(/[,;]/)
+                    .map((v) => v.trim())
+                    .filter(Boolean)
+                    .map((v) => [normalize(v), v]),
+                ).values(),
+              ];
+              const next: Word = {
+                ...edit,
+                translation: edit.translation.trim(),
+                synonyms,
+              };
+              if (changed) {
+                Object.assign(next, {
+                  status: "learning",
+                  successes: 0,
+                  lastReviewedAt: undefined,
+                  mastery: undefined,
+                  lapses: 0,
+                  dueAt: 0,
+                });
+                // Never silently transfer a different meaning's material to the edited entry.
+                if (edit.image === word.image) next.image = undefined;
+                if (edit.concept === word.concept) next.concept = "";
+                if (edit.example === word.example) next.example = "";
+                if (edit.exampleRu === word.exampleRu) next.exampleRu = "";
+                if (edit.definition === word.definition) next.definition = "";
+                if (synonymText === word.synonyms.join(", "))
+                  next.synonyms = [];
+                if (edit.partOfSpeech === word.partOfSpeech)
+                  next.partOfSpeech = "unknown";
+              }
+              if (!validWord(next)) {
+                setError(
+                  "Проверьте синонимы: до 20 разных вариантов, без самого слова, до 100 символов каждый.",
+                );
+                return;
+              }
+              if (
+                words.some(
+                  (w) => w.id !== word.id && meaningKey(w) === meaningKey(next),
+                )
+              ) {
+                setError(
+                  "Это значение уже есть в словаре. Откройте существующую запись.",
+                );
+                return;
+              }
               setStore((s) => ({
                 ...s,
-                words: s.words.map((w) => (w.id === word.id ? edit : w)),
+                words: s.words.map((w) => (w.id === word.id ? next : w)),
               }));
               notify("Слово обновлено");
               onClose();

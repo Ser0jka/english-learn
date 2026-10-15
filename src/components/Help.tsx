@@ -148,6 +148,30 @@ export default function Help({
       setBusy(false);
     }
   }
+  if (context.assessmentLocked)
+    return (
+      <Modal
+        title="Сначала вспомните сами"
+        subtitle="Ответ и справка откроются после выбора."
+        onClose={onClose}
+      >
+        <div className="form-body">
+          <p>
+            Выберите слово, которое соответствует образу и контексту. Можно
+            использовать клавиши 1–4.
+          </p>
+          <p>
+            Не уверены — попробуйте ответить. Ошибка не штрафуется: вы увидите
+            перевод и получите короткое повторение через 5 минут. Справка,
+            озвучка и ИИ до ответа скрыты, чтобы проверка оставалась
+            самостоятельной.
+          </p>
+          <button className="button primary" onClick={onClose}>
+            Вернуться к заданию
+          </button>
+        </div>
+      </Modal>
+    );
   const material = context.phrase?.text || context.word?.word || "ваши слова";
   return (
     <Modal

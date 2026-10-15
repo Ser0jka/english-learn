@@ -1,6 +1,9 @@
 export type Mode = "learn" | "review" | "new";
 export type Status = "learning" | "learned";
 export type Page = "home" | "cards" | "phrases" | "reading" | "words";
+export type PartOfSpeech =
+  "noun" | "verb" | "adjective" | "adverb" | "phrase" | "unknown";
+export type LearningState = Status | "due";
 export type Topic = "everyday" | "travel" | "ideas";
 export interface Word {
   id: string;
@@ -19,6 +22,10 @@ export interface Word {
   dueAt: number;
   addedAt: number;
   image?: string;
+  partOfSpeech?: PartOfSpeech;
+  lastReviewedAt?: number;
+  lapses?: number;
+  mastery?: "manual" | "scheduled";
 }
 export interface Phrase {
   generated?: boolean;
@@ -198,9 +205,9 @@ const entries: Array<
     "heart",
     "сердце",
     "hɑːt",
-    "The organ that pumps blood; also a symbol of feelings.",
-    "She knows this poem by heart.",
-    "Она знает это стихотворение наизусть.",
+    "The organ that pumps blood around the body.",
+    "Her heart beats faster when she runs.",
+    "Когда она бежит, её сердце бьётся быстрее.",
     [],
     "heart",
     "A1",
@@ -208,9 +215,9 @@ const entries: Array<
   ],
   [
     "dream",
-    "мечта; сон",
+    "мечта",
     "driːm",
-    "Something you hope for, or images in your mind while sleeping.",
+    "Something you hope to achieve in the future.",
     "Her dream is to travel around the world.",
     "Её мечта — путешествовать по миру.",
     [],
@@ -232,9 +239,9 @@ const entries: Array<
   ],
   [
     "bloom",
-    "цвести; цветение",
+    "цвести",
     "bluːm",
-    "To produce flowers; a flower in full beauty.",
+    "To produce flowers.",
     "The garden begins to bloom in spring.",
     "Весной сад начинает цвести.",
     ["blossom"],
@@ -316,9 +323,9 @@ const entries: Array<
   ],
   [
     "peace",
-    "покой; мир",
+    "покой",
     "piːs",
-    "A state of calm or freedom from conflict.",
+    "A state of calm and quiet.",
     "I found a moment of peace by the lake.",
     "У озера я нашёл минуту покоя.",
     [],
@@ -351,15 +358,62 @@ export const CATALOG: Word[] = entries.map((v, i) => ({
   concept: v[7],
   level: v[8],
   topic: v[9],
+  partOfSpeech: v[0] === "bloom" ? "verb" : "noun",
   status: "learning",
   successes: 0,
   dueAt: 0,
   addedAt: i,
 }));
+// Separate entries deliberately represent separate senses, with independent schedules.
+CATALOG.push(
+  {
+    ...CATALOG[2],
+    id: "book-reserve",
+    translation: "бронировать",
+    partOfSpeech: "verb",
+    concept: "",
+    definition: "To arrange to have a room, ticket or table at a future time.",
+    example: "We need to book a table for Friday.",
+    exampleRu: "Нам нужно забронировать столик на пятницу.",
+    synonyms: ["reserve"],
+  },
+  {
+    ...CATALOG[9],
+    id: "light-weight",
+    translation: "лёгкий по весу",
+    partOfSpeech: "adjective",
+    concept: "",
+    definition: "Not heavy.",
+    example: "This bag is light enough to carry all day.",
+    exampleRu: "Эта сумка достаточно лёгкая, чтобы носить её весь день.",
+    synonyms: ["lightweight"],
+  },
+  {
+    ...CATALOG[11],
+    id: "key-keyboard",
+    translation: "клавиша",
+    concept: "",
+    definition: "A button on a computer keyboard.",
+    example: "Press any key to continue.",
+    exampleRu: "Нажмите любую клавишу, чтобы продолжить.",
+    synonyms: [],
+  },
+  {
+    ...CATALOG[13],
+    id: "dream-sleep",
+    translation: "сон во время сна",
+    concept: "",
+    definition: "Images and events experienced while sleeping.",
+    example: "I had a strange dream last night.",
+    exampleRu: "Прошлой ночью мне приснился странный сон.",
+    synonyms: [],
+  },
+);
 export const INITIAL_WORDS: Word[] = CATALOG.slice(0, 12).map((w, i) => ({
   ...w,
   status: i >= 8 ? "learned" : "learning",
-  successes: i >= 8 ? 3 : 0,
+  successes: 0,
+  ...(i >= 8 ? { mastery: "manual" as const } : {}),
 }));
 export const TOPICS: Record<Topic, string> = {
   everyday: "Повседневная жизнь",

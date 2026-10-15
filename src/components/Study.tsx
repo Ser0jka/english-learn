@@ -24,6 +24,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import {
+  CATALOG,
   PASSAGES,
   PHRASES,
   type Word,
@@ -36,7 +37,12 @@ import {
   normalize,
   optionsFor,
   queueFor,
-  reviewWord,
+  recordPractice,
+  acceptedAnswers,
+  isCorrectAnswer,
+  canPractice,
+  maskedContext,
+  maskedDefinition,
   speak,
   validPhrase,
   validPassage,
@@ -60,13 +66,13 @@ export function Flashcards({
   onNavigate,
   onModeChange,
   storageError,
+  now,
 }: StudyProps) {
   const [deck, setDeck] = useState(() =>
-    queueFor(store.words, mode, store.interests).filter(
-      (w) => (w.concept || w.image) && w.translation,
-    ),
+    queueFor(store.words, mode, store.interests, now).filter(canPractice),
   );
   const [index, setIndex] = useState(0);
+  const answered = useRef(false);
   const [answer, setAnswer] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -76,59 +82,72 @@ export function Flashcards({
     if (index > 0) question.current?.focus();
   }, [index]);
   const nextDue = store.words
-    .filter((w) => w.dueAt > Date.now())
+    .filter(
+      (w) => w.dueAt > now && (mode !== "learn" || w.status === "learning"),
+    )
     .sort((a, b) => a.dueAt - b.dueAt)[0];
   useEffect(() => {
     onContext(
       word
-        ? { word }
+        ? answer === null
+          ? { assessmentLocked: true }
+          : { word, assessmentLocked: false }
         : {
             text: "Очередь карточек пуста. Добавьте слова с переводом и иллюстрацией или измените режим.",
           },
     );
-  }, [word, onContext]);
-  const options = useMemo(() => (word ? optionsFor(word) : []), [word]);
-  const correctAnswers = word ? [word.word, ...word.synonyms] : [];
-  const isCorrect = answer !== null && correctAnswers.includes(answer);
-  const skipped = queueFor(store.words, mode, store.interests).filter(
-    (w) => !(w.concept || w.image) || !w.translation,
-  ).length;
+  }, [word, answer, onContext]);
+  const options = useMemo(
+    () => (word ? optionsFor(word, store.words) : []),
+    [word],
+  );
+  const correctAnswers = word ? acceptedAnswers(word) : [];
+  const isCorrect = answer !== null && isCorrectAnswer(word, answer);
+  const skipped = (
+    mode === "learn"
+      ? store.words.filter((w) => w.status === "learning")
+      : queueFor(store.words, mode, store.interests, now)
+  ).filter((w) => !canPractice(w)).length;
+  useEffect(() => {
+    if (!deck.length && !finished) {
+      const eligible = queueFor(store.words, mode, store.interests, now).filter(
+        canPractice,
+      );
+      if (eligible.length) setDeck(eligible);
+    }
+  }, [store.words, now, mode, store.interests, deck.length, finished]);
   function choose(value: string) {
-    if (answer !== null || !word) return;
+    if (answered.current || answer !== null || !word) return;
+    const at = Date.now();
+    const correct = isCorrectAnswer(word, value);
+    const result = recordPractice(store, word, correct, at, mode === "new");
+    if (result === store) {
+      notify("Срок или состояние слова изменились. Обновите очередь.");
+      restart();
+      return;
+    }
+    answered.current = true;
     setAnswer(value);
-    const correct = correctAnswers.includes(value);
     if (correct) setScore((s) => s + 1);
-    setStore((s) => {
-      const existing = s.words.find(
-        (w) => normalize(w.word) === normalize(word.word),
-      );
-      const updated = reviewWord(
-        existing || { ...word, addedAt: Date.now() },
-        correct,
-      );
-      return {
-        ...s,
-        words: existing
-          ? s.words.map((w) => (w.id === existing.id ? updated : w))
-          : [...s.words, updated],
-        logs: [...s.logs, { at: Date.now(), wordId: updated.id, correct }],
-      };
-    });
+    setStore((s) => recordPractice(s, word, correct, at, mode === "new"));
   }
   function next() {
     if (index + 1 >= deck.length) {
       setFinished(true);
       return;
     }
+    answered.current = false;
+    onContext({ assessmentLocked: true });
     setIndex((i) => i + 1);
     setAnswer(null);
   }
   function restart() {
     setDeck(
-      queueFor(store.words, mode, store.interests).filter(
-        (w) => (w.concept || w.image) && w.translation,
+      queueFor(store.words, mode, store.interests, Date.now()).filter(
+        canPractice,
       ),
     );
+    answered.current = false;
     setIndex(0);
     setAnswer(null);
     setScore(0);
@@ -169,21 +188,26 @@ export function Flashcards({
             ? "Пока можно выдохнуть"
             : mode === "new"
               ? "Вся подборка уже у вас"
-              : "Начнём с ваших слов"}
+              : store.words.some(
+                    (w) => w.status === "learning" && canPractice(w),
+                  )
+                ? "На сегодня всё по расписанию"
+                : "Начнём с ваших слов"}
         </h2>
         <p>
           {mode === "review"
             ? "Сейчас нет слов, которым пора на повторение. Изучаемые слова тоже появятся здесь в назначенный срок."
             : mode === "new"
               ? "Вы добавили все слова из стартовой подборки. Пополните словарь своими."
-              : "Для карточек нужны слова с переводом и иллюстрацией. Добавьте их в разделе «Мои слова»."}
+              : "Новые слова доступны сразу, повторные — только по сроку. Для задания нужны перевод, часть речи и картинка или пример с этим словом."}
         </p>
         {skipped > 0 && (
           <p>
-            {skipped} слов без перевода или изображения: дополните их в словаре.
+            {skipped} слов пока без задания: добавьте перевод, картинку или
+            пример и проверьте синонимы.
           </p>
         )}
-        {mode === "review" && nextDue && (
+        {nextDue && (
           <p className="next-review">
             Ближайшее повторение:{" "}
             {new Date(nextDue.dueAt).toLocaleString("ru-RU", {
@@ -209,6 +233,13 @@ export function Flashcards({
               onClick={() => onModeChange("learn")}
             >
               Изучать слова
+            </button>
+          ) : mode === "learn" && nextDue ? (
+            <button
+              className="button primary"
+              onClick={() => onNavigate("reading")}
+            >
+              Читать со своими словами
             </button>
           ) : (
             <button className="button primary" onClick={onAddWords}>
@@ -250,12 +281,28 @@ export function Flashcards({
           </div>
         </div>
         <p className="muted small">
-          После ошибки слово возвращается в изучение. После трёх верных ответов
-          подряд — переходит в выученные.
+          Ошибка возвращает слово в «Учу», следующая проверка — через 5 минут.
+          «Выучил» — после трёх успешных проверок по сроку: через 1 день, затем
+          3 дня. Повтор сразу после ответа не повышает статус.
         </p>
         <button className="button primary" onClick={restart}>
           <RotateCcw size={17} />
           Новая практика
+        </button>
+      </div>
+    );
+  if (options.length !== 4)
+    return (
+      <div className="empty-state panel">
+        <Info size={28} />
+        <h2>Нужны однозначные варианты ответа</h2>
+        <p>
+          Для этого значения не хватает безопасных неверных вариантов: синонимы
+          пересекаются с доступной подборкой. Проверьте значение и список
+          синонимов в словаре. Ответ и прогресс не засчитаны.
+        </p>
+        <button className="button primary" onClick={() => onNavigate("words")}>
+          Открыть словарь
         </button>
       </div>
     );
@@ -288,15 +335,22 @@ export function Flashcards({
         <div className="flash-illustration">
           {word.image ? (
             <img src={word.image} alt="Иллюстрация к заданию" />
-          ) : (
+          ) : word.concept ? (
             <WordArt concept={word.concept} />
+          ) : (
+            <div className="context-art">
+              <BookOpen size={54} />
+              <span>Слово в контексте</span>
+            </div>
           )}
           <span className="image-label">
-            {word.level} <span>•</span> VISUAL MEMORY
+            {word.image || word.concept ? "ОБРАЗ И КОНТЕКСТ" : "КОНТЕКСТ"}
           </span>
           <button
             className="art-help"
-            onClick={() => onHelp({ word })}
+            onClick={() =>
+              onHelp(answer === null ? { assessmentLocked: true } : { word })
+            }
             aria-label="Справка о слове"
           >
             <HelpCircle size={20} />
@@ -310,10 +364,25 @@ export function Flashcards({
             Выберите один подходящий ответ. После ответа покажем все подходящие
             синонимы и перевод.
           </p>
+          {maskedDefinition(word) && (
+            <p className="card-definition" lang="en">
+              {maskedDefinition(word)}
+            </p>
+          )}
+          {maskedContext(word) && (
+            <p className="card-context" lang="en">
+              {maskedContext(word)}
+            </p>
+          )}
+          {mode === "new" && (
+            <p className="muted small">
+              Из фиксированной редакционной подборки. Выбранные темы идут
+              первыми; уровень и частотность автоматически не оцениваются.
+            </p>
+          )}
           <div className="answer-grid">
             {options.map((option, i) => {
-              const correct =
-                answer !== null && correctAnswers.includes(option);
+              const correct = answer !== null && isCorrectAnswer(word, option);
               const wrong = answer === option && !isCorrect;
               return (
                 <button
@@ -384,6 +453,27 @@ export function Flashcards({
               {word.exampleRu && (
                 <p className="feedback-translation">{word.exampleRu}</p>
               )}
+              <p className="feedback-sense">
+                Здесь проверяется значение «{word.translation}». Синонимы
+                подходят к этому значению, а не ко всем употреблениям слова.
+              </p>
+              <p className="feedback-schedule">
+                Следующая проверка:{" "}
+                {new Date(
+                  store.words.find(
+                    (w) =>
+                      w.id === word.id ||
+                      (w.word === word.word &&
+                        w.translation === word.translation),
+                  )?.dueAt || 0,
+                ).toLocaleString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                .
+              </p>
             </div>
           ) : (
             <div className="answer-hint">
@@ -432,8 +522,9 @@ export function Flashcards({
           <div>
             <strong>В своём ритме</strong>
             <p>
-              Повторения назначаются через 1, 3, 7, 14 и 30 дней после верных
-              ответов.
+              После верных ответов: 1, 3, 7, 14, 30, 60, 120, 180 дней. После
+              ошибки — 5 минут и начало последовательности заново. Засчитываются
+              только ответы по сроку.
             </p>
           </div>
         </div>
@@ -441,7 +532,8 @@ export function Flashcards({
           <div className="panel small-panel">
             <Info size={20} />
             <p>
-              {skipped} слов пропущено: добавьте перевод или картинку в словаре.
+              {skipped} слов пропущено: дополните перевод, иллюстрацию или
+              пример в словаре.
             </p>
           </div>
         )}
@@ -595,7 +687,10 @@ export function Phrases({
   function toggle(p: Phrase) {
     const saved = store.phraseIds.includes(p.id);
     setStore((s) => {
-      const word = makeWord(p.text, p.translation);
+      const word = {
+        ...makeWord(p.text, p.translation),
+        partOfSpeech: "phrase" as const,
+      };
       // An idiom's meaning is not the literal meaning of a keyword.
       const concept = "";
       return {
@@ -855,14 +950,25 @@ export function Reading({
   const [passageId, setPassageId] = useState(ranked[0].id);
   const [showTranslation, setShowTranslation] = useState(false);
   const [selected, setSelected] = useState<Word | null>(null);
+  const [senseChosen, setSenseChosen] = useState(false);
   const passage = passages.find((p) => p.id === passageId)!;
-  const highlighted = mode === "new" ? relevant : store.words;
+  const highlighted =
+    mode === "new" ? mergeWords(store.words, relevant).words : store.words;
   const matches = highlighted.filter((w) =>
     highlightText(passage.text, [w]).some((part) => part.word),
   );
+  const selectedSenses = selected
+    ? mergeWords(highlighted, CATALOG).words.filter(
+        (w) => normalize(w.word) === normalize(selected.word),
+      )
+    : [];
+  const ambiguous = selectedSenses.length > 1 && !senseChosen;
   useEffect(() => {
-    onContext({ word: selected || matches[0], text: passage.text });
-  }, [selected, passage, onContext, store.words]);
+    onContext({
+      word: selected && !ambiguous ? selected : undefined,
+      text: passage.text,
+    });
+  }, [selected, ambiguous, passage, onContext, store.words]);
   const renderText = (text: string) =>
     highlightText(text, highlighted).map((part, i) =>
       part.word ? (
@@ -871,7 +977,10 @@ export function Reading({
           className={`reading-word ${part.word.status === "learned" ? "known" : "learning"} ${selected?.id === part.word.id ? "selected" : ""}`}
           aria-label={`${part.text} — показать значение`}
           aria-pressed={selected?.id === part.word.id}
-          onClick={() => setSelected(part.word!)}
+          onClick={() => {
+            setSelected(part.word!);
+            setSenseChosen(false);
+          }}
         >
           {part.text}
         </button>
@@ -940,8 +1049,8 @@ export function Reading({
           </span>
           <span>
             <Bookmark size={14} />
-            {matches.length} слов из{" "}
-            {mode === "new" ? "новой подборки" : "вашего словаря"}
+            {matches.length} значений из{" "}
+            {mode === "new" ? "словаря и новой подборки" : "вашего словаря"}
           </span>
         </div>
         <div className="reading-text" lang="en">
@@ -1046,6 +1155,10 @@ export function Reading({
         <div className="panel small-panel reading-legend">
           <span className="eyebrow">ЗНАКОМЫЕ СЛОВА РЯДОМ</span>
           <p>Нажмите на выделенное слово, чтобы вспомнить его значение.</p>
+          <p>
+            Подсветка ищет совпадения в написании. Подходящее к контексту
+            значение выберите сами; чтение не повышает статус слова.
+          </p>
           <div>
             <span className="legend-sample learning">учу</span>
             <span className="legend-sample known">знаю</span>
@@ -1084,10 +1197,36 @@ export function Reading({
             {selected.phonetic && (
               <span className="phonetic">/{selected.phonetic}/</span>
             )}
-            <p className="word-translation">{selected.translation}</p>
-            {selected.definition && <p>{selected.definition}</p>}
+            {selectedSenses.length > 1 && (
+              <div className="sense-picker">
+                <p>
+                  В словаре и подборке несколько значений. Выберите подходящее к
+                  тексту — автоматически значение не определяется.
+                </p>
+                {selectedSenses.map((w) => (
+                  <button
+                    className="button secondary"
+                    key={w.id}
+                    aria-pressed={senseChosen && w.id === selected.id}
+                    onClick={() => {
+                      setSelected(w);
+                      setSenseChosen(true);
+                    }}
+                  >
+                    {w.translation}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!ambiguous && (
+              <>
+                <p className="word-translation">{selected.translation}</p>
+                {selected.definition && <p>{selected.definition}</p>}
+              </>
+            )}
             <button
               className="text-button gold"
+              disabled={ambiguous}
               onClick={() => onHelp({ word: selected, text: passage.text })}
             >
               Спросить о слове
