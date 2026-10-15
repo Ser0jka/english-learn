@@ -1,28 +1,47 @@
-import { useEffect, useState } from "react";
-export function useCapabilities(kind: "text" | "image" = "text") {
-  const [available, setAvailable] = useState(false);
+import { useCallback, useEffect, useState } from "react";
+export type ServiceStatus = "loading" | "ready" | "unconfigured" | "offline";
+export function useServiceStatus(kind: "text" | "image" = "text") {
+  const [status, setStatus] = useState<ServiceStatus>("loading");
+  const [revision, setRevision] = useState(0);
+  const retry = useCallback(() => {
+    setStatus("loading");
+    setRevision((v) => v + 1);
+  }, []);
   useEffect(() => {
     const c = new AbortController();
-    fetch("/api/health", { signal: c.signal })
-      .then((r) => {
+    fetch("/api/health", {
+      signal: AbortSignal.any([c.signal, AbortSignal.timeout(8000)]),
+    })
+      .then(async (r) => {
         if (!r.ok) throw new Error("Health check failed");
-        return r.json();
+        const data: unknown = await r.json();
+        if (
+          !data ||
+          typeof data !== "object" ||
+          !("ok" in data) ||
+          data.ok !== true
+        )
+          throw new Error("Invalid health response");
+        const value =
+          kind === "image" && "imageAvailable" in data
+            ? data.imageAvailable
+            : "aiAvailable" in data
+              ? data.aiAvailable
+              : false;
+        return value === true;
       })
-      .then((data) =>
-        setAvailable(
-          Boolean(
-            kind === "image"
-              ? (data.imageAvailable ?? data.aiAvailable)
-              : data.aiAvailable,
-          ),
-        ),
-      )
+      .then((available) => {
+        if (!c.signal.aborted) setStatus(available ? "ready" : "unconfigured");
+      })
       .catch(() => {
-        if (!c.signal.aborted) setAvailable(false);
+        if (!c.signal.aborted) setStatus("offline");
       });
     return () => c.abort();
-  }, [kind]);
-  return available;
+  }, [kind, revision]);
+  return { status, available: status === "ready", retry };
+}
+export function useCapabilities(kind: "text" | "image" = "text") {
+  return useServiceStatus(kind).available;
 }
 export async function materialRequest<T>(
   kind: "phrases" | "reading" | "image",

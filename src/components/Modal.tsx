@@ -20,6 +20,9 @@ export default function Modal({
   close.current = onClose;
   useEffect(() => {
     const before = document.activeElement as HTMLElement;
+    const root = document.getElementById("root");
+    const wasInert = root?.inert || false;
+    if (root) root.inert = true;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const focusables = () =>
@@ -27,13 +30,21 @@ export default function Modal({
         ref.current?.querySelectorAll<HTMLElement>(
           'button:not(:disabled), input:not(:disabled), select, textarea, a[href], [tabindex="0"]',
         ) || [],
+      ).filter(
+        (el) =>
+          el.getClientRects().length > 0 &&
+          !el.hasAttribute("disabled") &&
+          getComputedStyle(el).visibility !== "hidden",
       );
     (
       focusables().find((el) => el.hasAttribute("data-autofocus")) ||
       focusables()[0]
     )?.focus();
     const handle = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close.current();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close.current();
+      }
       if (e.key === "Tab") {
         const els = focusables();
         const first = els[0],
@@ -50,6 +61,7 @@ export default function Modal({
     document.addEventListener("keydown", handle);
     return () => {
       document.body.style.overflow = previous;
+      if (root) root.inert = wasInert;
       document.removeEventListener("keydown", handle);
       before?.focus();
     };

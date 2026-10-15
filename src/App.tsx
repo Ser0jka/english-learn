@@ -53,7 +53,7 @@ import {
   streak,
   type Store,
 } from "./domain";
-import type { HelpContext } from "./types";
+import type { HelpContext, NoticeAction } from "./types";
 import WordArt from "./components/WordArt";
 import { AddWords, WordEditor } from "./components/WordForms";
 import { Flashcards, Phrases, Reading } from "./components/Study";
@@ -108,9 +108,48 @@ export default function App() {
   const [currentHelp, setCurrentHelp] = useState<HelpContext>({
     word: initial.state.words[0] || CATALOG[0],
   });
+  useEffect(() => {
+    if (page === "home" || page === "words")
+      setCurrentHelp({
+        word: store.words[0],
+        text: store.words.length
+          ? "Ваш словарь английских слов"
+          : "Как добавить слова и начать изучение английского",
+      });
+  }, [page, store.words]);
   const [settings, setSettings] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [toast, setToast] = useState("");
+  const [toastAction, setToastAction] = useState<NoticeAction | null>(null);
+  const [welcome, setWelcome] = useState(() => {
+    try {
+      return (
+        !localStorage.getItem("lexi.welcome.seen") &&
+        !localStorage.getItem(STORAGE_KEY)
+      );
+    } catch {
+      return false;
+    }
+  });
+  const previousPage = useRef(page);
+  useEffect(() => {
+    document.title = `${NAV.find((n) => n.id === page)?.label || "Lexi"} · Lexi`;
+    if (previousPage.current !== page) {
+      previousPage.current = page;
+      requestAnimationFrame(() =>
+        document.getElementById("page-title")?.focus(),
+      );
+    }
+  }, [page]);
+  function dismissWelcome() {
+    setWelcome(false);
+    try {
+      localStorage.setItem("lexi.welcome.seen", "1");
+    } catch {
+      notify("Подсказка скрыта на текущую сессию.");
+    }
+  }
+
   const [storageError, setStorageError] = useState(initial.error);
   const [query, setQuery] = useState("");
   const [wordFilter, setWordFilter] = useState("all");
@@ -182,10 +221,11 @@ export default function App() {
     setMobile(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  function notify(message: string) {
+  function notify(message: string, action?: NoticeAction) {
     setToast(message);
+    setToastAction(action || null);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setToast(""), 4500);
+    if (!action) timer.current = setTimeout(() => setToast(""), 6500);
   }
   function exportWords() {
     const blob = new Blob([createBackup(store)], { type: "application/json" });
@@ -207,7 +247,10 @@ export default function App() {
   const shownWords = store.words
     .filter(
       (w) =>
-        (wordFilter === "all" || w.status === wordFilter) &&
+        (wordFilter === "all" ||
+          (wordFilter === "incomplete"
+            ? !(w.image || w.concept) || !w.translation
+            : w.status === wordFilter)) &&
         (!query ||
           [w.word, w.translation].some((v) =>
             normalize(v).includes(normalize(query)),
@@ -221,9 +264,23 @@ export default function App() {
     notify,
     onHelp: setHelp,
     onContext: setCurrentHelp,
+    onAddWords: () => setAddOpen(true),
+    onNavigate: go,
+    onModeChange: setMode,
+    storageError,
   };
   return (
     <div className="app-shell">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+      >
+        Перейти к содержимому
+      </a>
       {mobile && (
         <div className="sidebar-backdrop" onClick={() => setMobile(false)} />
       )}
@@ -371,7 +428,7 @@ export default function App() {
             </button>
           </div>
         </header>
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <div className="mode-bar">
             <div className="mode-switch" aria-label="Режим обучения">
               {MODES.map((m) => (
@@ -411,7 +468,9 @@ export default function App() {
                   ? "MAKE WORDS YOUR OWN"
                   : "YOUR LITTLE ENGLISH RITUAL"}
               </span>
-              <h1>{PAGE_COPY[page][0]}</h1>
+              <h1 id="page-title" tabIndex={-1}>
+                {PAGE_COPY[page][0]}
+              </h1>
               <p>{PAGE_COPY[page][1]}</p>
             </div>
             {page === "words" ? (
@@ -441,6 +500,50 @@ export default function App() {
               </div>
             ) : null}
           </div>
+          {page === "home" && welcome && (
+            <section className="welcome-card" aria-label="Как начать">
+              <span className="welcome-icon">
+                <Sparkles size={24} />
+              </span>
+              <div className="welcome-content">
+                <h2>Ваш английский начинается здесь</h2>
+                <p>
+                  Мы добавили 12 учебных примеров, чтобы вы могли попробовать
+                  все режимы. Стартовые пометки «Учу» и «Выучил» можно изменить.
+                  Ваши ответы и прогресс сохраняются только в этом браузере.
+                </p>
+                <div className="row-buttons">
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      dismissWelcome();
+                      go("cards");
+                    }}
+                  >
+                    Попробовать карточки
+                    <ArrowRight size={16} />
+                  </button>
+                  <button
+                    className="text-button gold"
+                    onClick={() => {
+                      dismissWelcome();
+                      setAddOpen(true);
+                    }}
+                  >
+                    Добавить первое слово
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+              <button
+                className="icon-button"
+                aria-label="Скрыть подсказку первого запуска"
+                onClick={dismissWelcome}
+              >
+                <X size={18} />
+              </button>
+            </section>
+          )}
           {page === "home" && (
             <Home
               store={store}
@@ -482,10 +585,21 @@ export default function App() {
                     { id: "all", label: `Все · ${store.words.length}` },
                     { id: "learning", label: `Учу · ${learning}` },
                     { id: "learned", label: `Выучил · ${learned}` },
+                    ...(store.words.some(
+                      (w) => !(w.concept || w.image) || !w.translation,
+                    )
+                      ? [
+                          {
+                            id: "incomplete",
+                            label: `Без карточки · ${store.words.filter((w) => !(w.concept || w.image) || !w.translation).length}`,
+                          },
+                        ]
+                      : []),
                   ].map((f) => (
                     <button
                       key={f.id}
                       className={wordFilter === f.id ? "active" : ""}
+                      aria-pressed={wordFilter === f.id}
                       onClick={() => setWordFilter(f.id)}
                     >
                       {f.label}
@@ -493,6 +607,9 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              <p className="sr-only" aria-live="polite">
+                Найдено слов: {shownWords.length}
+              </p>
               <div className="word-grid">
                 {shownWords.map((w) => (
                   <article key={w.id} className="word-tile panel">
@@ -519,7 +636,7 @@ export default function App() {
                         </span>
                       </div>
                       <div className="word-tile-copy">
-                        <h3>{w.word}</h3>
+                        <h3 lang="en">{w.word}</h3>
                         <p>{w.translation || "Добавьте перевод"}</p>
                         <span className="phonetic">
                           {w.phonetic
@@ -585,13 +702,32 @@ export default function App() {
                   <h2>
                     {query
                       ? "Не нашли такого слова"
-                      : "Здесь будет ваша коллекция"}
+                      : store.words.length
+                        ? wordFilter === "learned"
+                          ? "Пока нет выученных слов"
+                          : wordFilter === "incomplete"
+                            ? "Все карточки готовы"
+                            : "В этом списке пока нет слов"
+                        : "Здесь будет ваша коллекция"}
                   </h2>
                   <p>
                     {query
-                      ? "Попробуйте другой запрос или добавьте слово в словарь."
-                      : "Добавляйте слова и отмечайте, какие уже знаете."}
+                      ? "Попробуйте другой запрос или сбросьте фильтры."
+                      : store.words.length
+                        ? "Откройте все слова, чтобы продолжить практику."
+                        : "Добавьте первое слово или загрузите список. Слова с переводом и картинкой сразу попадут в карточки."}
                   </p>
+                  {store.words.length > 0 && (
+                    <button
+                      className="button secondary"
+                      onClick={() => {
+                        setQuery("");
+                        setWordFilter("all");
+                      }}
+                    >
+                      Сбросить фильтры
+                    </button>
+                  )}
                   <button
                     className="button primary"
                     onClick={() => setAddOpen(true)}
@@ -626,6 +762,7 @@ export default function App() {
           setStore={setStore}
           notify={notify}
           onClose={() => setAddOpen(false)}
+          onOpenWord={setEdit}
         />
       )}
       {edit && (
@@ -714,7 +851,20 @@ export default function App() {
           <span>
             <Check size={16} />
           </span>
-          {toast}
+          <span className="toast-message">{toast}</span>
+          {toastAction && (
+            <button
+              className="toast-action"
+              onClick={() => {
+                const action = toastAction;
+                setToast("");
+                setToastAction(null);
+                action.onClick();
+              }}
+            >
+              {toastAction.label}
+            </button>
+          )}
           <button
             className="icon-button"
             aria-label="Скрыть уведомление"

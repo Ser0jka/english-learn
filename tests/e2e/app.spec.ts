@@ -72,7 +72,7 @@ test("imports lists and skips duplicates", async ({ page }) => {
     .getByRole("button", { name: "Добавить слова", exact: true })
     .click();
   const d = page.getByRole("dialog");
-  await d.getByRole("button", { name: "Загрузить список" }).click();
+  await d.getByRole("tab", { name: "Загрузить список" }).click();
   await d
     .getByLabel("Или вставьте список")
     .fill(
@@ -147,9 +147,14 @@ test("opens expression history, follows source links and adds expression to lear
   await expect(
     page.getByRole("link", { name: /Уильям Шекспир/ }),
   ).toHaveAttribute("href", /folger.edu/);
-  await page.getByRole("button", { name: "Учить", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Учить: break the ice", exact: true })
+    .click();
   await expect(
-    page.getByRole("button", { name: "Изучаю", exact: true }),
+    page.getByRole("button", {
+      name: "Не изучать: break the ice",
+      exact: true,
+    }),
   ).toBeVisible();
   const state = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)!),
@@ -277,7 +282,7 @@ test("uploads an actual CSV file and displays a useful error for invalid data", 
     .getByRole("button", { name: "Добавить слова", exact: true })
     .click();
   const d = page.getByRole("dialog");
-  await d.getByRole("button", { name: "Загрузить список" }).click();
+  await d.getByRole("tab", { name: "Загрузить список" }).click();
   await d.locator("input[type=file]").setInputFiles({
     name: "bad.csv",
     mimeType: "text/csv",
@@ -482,7 +487,7 @@ test("exports and restores the complete workspace with progress after confirmati
     .getByRole("button", { name: "Добавить слова", exact: true })
     .click();
   const d = page.getByRole("dialog");
-  await d.getByRole("button", { name: "Загрузить список" }).click();
+  await d.getByRole("tab", { name: "Загрузить список" }).click();
   await d.locator("input[type=file]").setInputFiles({
     name: "backup.json",
     mimeType: "application/json",
@@ -517,7 +522,9 @@ test("deleting a saved expression also clears its selection", async ({
   await page
     .getByRole("textbox", { name: "Найти выражения по слову" })
     .fill("ice");
-  await page.getByRole("button", { name: "Учить", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Учить: break the ice", exact: true })
+    .click();
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Мои слова", exact: true })

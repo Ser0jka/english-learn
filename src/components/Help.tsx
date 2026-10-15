@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Sparkles, BookOpen, ArrowUpRight } from "lucide-react";
 import type { HelpContext } from "../types";
 import Modal from "./Modal";
-import { useCapabilities } from "../useMaterials";
+import { useServiceStatus } from "../useMaterials";
+
+import ServiceNotice from "./ServiceNotice";
 
 export function referenceAnswer(
   context: HelpContext,
@@ -50,12 +52,14 @@ export default function Help({
   context: HelpContext;
   onClose: () => void;
 }) {
-  const available = useCapabilities();
+  const connection = useServiceStatus();
+  const { available } = connection;
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<
     Array<{ role: "user" | "assistant"; text: string }>
   >([]);
   const [busy, setBusy] = useState(false);
+  const [failedQuestion, setFailedQuestion] = useState("");
   const scroll = useRef<HTMLDivElement>(null);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
@@ -68,6 +72,7 @@ export default function Help({
   async function ask(question: string) {
     if (!question.trim() || busy) return;
     setInput("");
+    setFailedQuestion("");
     setMessages((m) => [...m, { role: "user", text: question }]);
     const local = referenceAnswer(context, question);
     if (local) {
@@ -99,7 +104,10 @@ export default function Help({
               : undefined,
           }),
         }),
-        signal: abort.current.signal,
+        signal: AbortSignal.any([
+          abort.current.signal,
+          AbortSignal.timeout(60000),
+        ]),
       });
       const data: unknown = await result.json();
       if (
@@ -117,6 +125,7 @@ export default function Help({
           : "error" in data && typeof data.error === "string"
             ? data.error
             : "Не удалось получить ответ.";
+      if (!result.ok) setFailedQuestion(question);
       setMessages((m) => [
         ...m,
         {
@@ -125,7 +134,8 @@ export default function Help({
         },
       ]);
     } catch (e) {
-      if (!(e instanceof DOMException && e.name === "AbortError"))
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        setFailedQuestion(question);
         setMessages((m) => [
           ...m,
           {
@@ -133,6 +143,7 @@ export default function Help({
             text: "Связь прервалась. Попробуйте ещё раз или выберите вопрос из справочника.",
           },
         ]);
+      }
     } finally {
       setBusy(false);
     }
@@ -153,7 +164,17 @@ export default function Help({
         <span>Сейчас изучаем</span>
         <strong>{material}</strong>
       </div>
-      <div className="chat-messages" ref={scroll}>
+      <div className="assistant-availability">
+        <ServiceNotice connection={connection} />
+      </div>
+      <div
+        className="chat-messages"
+        ref={scroll}
+        role="log"
+        aria-label="Переписка с помощником"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
         <div className="chat-message assistant">
           <span className="chat-avatar">
             <Sparkles size={16} />
@@ -179,6 +200,17 @@ export default function Help({
           </div>
         )}
       </div>
+      {failedQuestion && (
+        <div className="helper-retry">
+          <button
+            className="button secondary"
+            onClick={() => void ask(failedQuestion)}
+            disabled={busy}
+          >
+            Повторить вопрос
+          </button>
+        </div>
+      )}
       <div className="quick-questions">
         {[
           "Что это значит?",
@@ -193,6 +225,7 @@ export default function Help({
       </div>
       <form
         className="chat-form"
+        aria-busy={busy}
         onSubmit={(e) => {
           e.preventDefault();
           void ask(input);

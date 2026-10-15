@@ -26,20 +26,23 @@ import Modal from "./Modal";
 import {
   compactImage,
   materialRequest,
-  useCapabilities,
+  useServiceStatus,
 } from "../useMaterials";
 import WordArt from "./WordArt";
+import ServiceNotice from "./ServiceNotice";
 
 export function AddWords({
   store,
   setStore,
   notify,
   onClose,
+  onOpenWord,
 }: {
   store: StudyProps["store"];
   setStore: StudyProps["setStore"];
   notify: StudyProps["notify"];
   onClose: () => void;
+  onOpenWord: (word: Word) => void;
 }) {
   const [tab, setTab] = useState<"manual" | "import">("manual");
   const [word, setWord] = useState("");
@@ -51,6 +54,20 @@ export function AddWords({
   const [preview, setPreview] = useState<Word[] | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [restore, setRestore] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const importSummary = preview ? mergeWords(store.words, preview) : null;
+  const missingImages =
+    preview?.filter((w) => !(w.concept || w.image)).length || 0;
+  function inspect() {
+    try {
+      setPreview(parseBackup(text)?.words || parseImport(text));
+      setError("");
+    } catch (e) {
+      setPreview(null);
+      setError(e instanceof Error ? e.message : "Проверьте формат списка.");
+    }
+  }
   const backup = useMemo(() => {
     try {
       return parseBackup(text);
@@ -65,8 +82,14 @@ export function AddWords({
       return;
     }
     setStore((s) => ({ ...s, words: mergeWords(s.words, words).words }));
+    const created = words.find(
+      (w) => !store.words.some((v) => normalize(v.word) === normalize(w.word)),
+    );
     notify(
       `Добавлено слов: ${result.added}${result.duplicates ? ` · Уже были в словаре: ${result.duplicates}` : ""}`,
+      result.added === 1 && created && !(created.concept || created.image)
+        ? { label: "Добавить иллюстрацию", onClick: () => onOpenWord(created) }
+        : undefined,
     );
     onClose();
   }
@@ -80,6 +103,7 @@ export function AddWords({
       setError("Максимальный размер файла — 20 МБ.");
       return;
     }
+    setFileName(file.name);
     setPending(true);
     try {
       const content = await file.text();
@@ -98,9 +122,35 @@ export function AddWords({
       onClose={onClose}
       wide
     >
-      <div className="form-tabs">
+      <div
+        className="form-tabs"
+        role="tablist"
+        aria-label="Способ добавления слов"
+        onKeyDown={(e) => {
+          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+            e.preventDefault();
+            const next =
+              e.key === "Home"
+                ? "manual"
+                : e.key === "End"
+                  ? "import"
+                  : tab === "manual"
+                    ? "import"
+                    : "manual";
+            setTab(next);
+            e.currentTarget
+              .querySelector<HTMLElement>(`[id="add-tab-${next}"]`)
+              ?.focus();
+          }
+        }}
+      >
         <button
           className={tab === "manual" ? "active" : ""}
+          role="tab"
+          id="add-tab-manual"
+          aria-controls="add-panel-manual"
+          aria-selected={tab === "manual"}
+          tabIndex={tab === "manual" ? 0 : -1}
           onClick={() => {
             setTab("manual");
             setError("");
@@ -111,6 +161,11 @@ export function AddWords({
         </button>
         <button
           className={tab === "import" ? "active" : ""}
+          role="tab"
+          id="add-tab-import"
+          aria-controls="add-panel-import"
+          aria-selected={tab === "import"}
+          tabIndex={tab === "import" ? 0 : -1}
           onClick={() => {
             setTab("import");
             setError("");
@@ -132,6 +187,9 @@ export function AddWords({
             add([makeWord(word, translation, status)]);
           }}
           className="form-body"
+          role="tabpanel"
+          id="add-panel-manual"
+          aria-labelledby="add-tab-manual"
         >
           <label>
             Слово или выражение
@@ -141,11 +199,18 @@ export function AddWords({
               maxLength={100}
               value={word}
               onChange={(e) => {
+                const previous = CATALOG.find(
+                  (w) => w.word === normalize(word),
+                );
                 setWord(e.target.value);
                 const known = CATALOG.find(
                   (w) => w.word === normalize(e.target.value),
                 );
-                if (known) setTranslation(known.translation);
+                if (
+                  !translation.trim() ||
+                  translation === previous?.translation
+                )
+                  setTranslation(known?.translation || "");
               }}
               placeholder="Например, serendipity"
               autoComplete="off"
@@ -167,6 +232,7 @@ export function AddWords({
               <button
                 type="button"
                 className={status === "learning" ? "active" : ""}
+                aria-pressed={status === "learning"}
                 onClick={() => setStatus("learning")}
               >
                 <span className="status-dot learning" />
@@ -175,6 +241,7 @@ export function AddWords({
               <button
                 type="button"
                 className={status === "learned" ? "active" : ""}
+                aria-pressed={status === "learned"}
                 onClick={() => setStatus("learned")}
               >
                 <Check size={16} />
@@ -197,15 +264,35 @@ export function AddWords({
           </button>
         </form>
       ) : (
-        <div className="form-body">
+        <div
+          className="form-body"
+          role="tabpanel"
+          id="add-panel-import"
+          aria-labelledby="add-tab-import"
+          aria-busy={pending}
+        >
           <button
-            className="upload-zone"
+            className={`upload-zone ${dragging ? "is-dragging" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              if (!pending) void readFile(e.dataTransfer.files[0]);
+            }}
             onClick={() => fileRef.current?.click()}
             disabled={pending}
           >
             <Upload size={27} />
             <strong>
-              {pending ? "Читаем файл…" : "Выберите файл со словами"}
+              {pending
+                ? "Читаем файл…"
+                : fileName
+                  ? fileName
+                  : "Выберите файл или перетащите сюда"}
             </strong>
             <span>TXT, CSV или JSON · до 20 МБ</span>
           </button>
@@ -239,6 +326,16 @@ export function AddWords({
             перевод и статус через точку с запятой. learning — учу, learned —
             выучил. Дубликаты пропустим.
           </p>
+          <div className="import-inspect">
+            <button
+              className="button secondary"
+              disabled={pending || !text.trim()}
+              onClick={inspect}
+            >
+              Проверить список
+            </button>
+            <p>Покажем новые слова, дубликаты и недостающие картинки.</p>
+          </div>
           {backup && (
             <div className="backup-preview">
               <strong>Полная резервная копия</strong>
@@ -262,7 +359,19 @@ export function AddWords({
           )}
           {preview && (
             <div className="import-preview">
-              <strong>Готово к импорту: {preview.length}</strong>
+              <strong>Готово к импорту: {importSummary?.added || 0}</strong>
+              <ul>
+                <li>
+                  Уже в словаре или повторяются в файле:{" "}
+                  {importSummary?.duplicates || 0}
+                </li>
+                {missingImages > 0 && (
+                  <li>
+                    Без иллюстрации: {missingImages}. Эти слова сохранятся в
+                    словаре; картинку можно добавить позже.
+                  </li>
+                )}
+              </ul>
               <p>
                 {preview
                   .slice(0, 5)
@@ -317,7 +426,8 @@ export function WordEditor({
   onHelp: () => void;
 }) {
   const [edit, setEdit] = useState({ ...word });
-  const available = useCapabilities("image");
+  const connection = useServiceStatus("image");
+  const { available } = connection;
   const [generating, setGenerating] = useState(false);
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
@@ -382,7 +492,7 @@ export function WordEditor({
       onClose={onClose}
     >
       <div className="form-body">
-        <div className="editor-image">
+        <div className="editor-image" aria-busy={reading || generating}>
           {edit.image ? (
             <img src={edit.image} alt={edit.word} />
           ) : (
@@ -407,10 +517,12 @@ export function WordEditor({
             e.target.value = "";
           }}
         />
+        <ServiceNotice connection={connection} kind="image" />
         {available && (
           <button
             className="button secondary full"
             disabled={generating || reading || !edit.translation.trim()}
+            aria-busy={generating}
             onClick={() => void generateImage()}
           >
             {generating ? (

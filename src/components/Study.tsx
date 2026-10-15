@@ -45,7 +45,9 @@ import {
 } from "../domain";
 import type { StudyProps } from "../types";
 import WordArt from "./WordArt";
-import { materialRequest, useCapabilities } from "../useMaterials";
+import { materialRequest, useServiceStatus } from "../useMaterials";
+
+import ServiceNotice from "./ServiceNotice";
 
 export function Flashcards({
   store,
@@ -54,6 +56,10 @@ export function Flashcards({
   notify,
   onHelp,
   onContext,
+  onAddWords,
+  onNavigate,
+  onModeChange,
+  storageError,
 }: StudyProps) {
   const [deck, setDeck] = useState(() =>
     queueFor(store.words, mode, store.interests).filter(
@@ -64,9 +70,22 @@ export function Flashcards({
   const [answer, setAnswer] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
+  const question = useRef<HTMLHeadingElement>(null);
   const word = deck[index];
   useEffect(() => {
-    if (word) onContext({ word });
+    if (index > 0) question.current?.focus();
+  }, [index]);
+  const nextDue = store.words
+    .filter((w) => w.dueAt > Date.now())
+    .sort((a, b) => a.dueAt - b.dueAt)[0];
+  useEffect(() => {
+    onContext(
+      word
+        ? { word }
+        : {
+            text: "Очередь карточек пуста. Добавьте слова с переводом и иллюстрацией или измените режим.",
+          },
+    );
   }, [word, onContext]);
   const options = useMemo(() => (word ? optionsFor(word) : []), [word]);
   const correctAnswers = word ? [word.word, ...word.synonyms] : [];
@@ -126,7 +145,12 @@ export function Flashcards({
         const value = options[Number(e.key) - 1];
         if (value) choose(value);
       }
-      if (e.key === "Enter" && answer !== null) {
+      if (
+        e.key === "Enter" &&
+        answer !== null &&
+        !e.repeat &&
+        !(e.target instanceof Element && e.target.closest("button,a"))
+      ) {
         e.preventDefault();
         next();
       }
@@ -149,7 +173,7 @@ export function Flashcards({
         </h2>
         <p>
           {mode === "review"
-            ? "На сегодня нет выученных слов, которым пора на повторение."
+            ? "Сейчас нет слов, которым пора на повторение. Изучаемые слова тоже появятся здесь в назначенный срок."
             : mode === "new"
               ? "Вы добавили все слова из стартовой подборки. Пополните словарь своими."
               : "Для карточек нужны слова с переводом и иллюстрацией. Добавьте их в разделе «Мои слова»."}
@@ -159,10 +183,43 @@ export function Flashcards({
             {skipped} слов без перевода или изображения: дополните их в словаре.
           </p>
         )}
-        <button className="button secondary" onClick={restart}>
-          <RotateCcw size={16} />
-          Проверить очередь
-        </button>
+        {mode === "review" && nextDue && (
+          <p className="next-review">
+            Ближайшее повторение:{" "}
+            {new Date(nextDue.dueAt).toLocaleString("ru-RU", {
+              day: "numeric",
+              month: "long",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            .
+          </p>
+        )}
+        <div className="empty-actions">
+          {skipped > 0 ? (
+            <button
+              className="button primary"
+              onClick={() => onNavigate("words")}
+            >
+              Дополнить карточки
+            </button>
+          ) : mode === "review" ? (
+            <button
+              className="button primary"
+              onClick={() => onModeChange("learn")}
+            >
+              Изучать слова
+            </button>
+          ) : (
+            <button className="button primary" onClick={onAddWords}>
+              Добавить слова
+            </button>
+          )}
+          <button className="button secondary" onClick={restart}>
+            <RotateCcw size={16} />
+            Проверить очередь
+          </button>
+        </div>
       </div>
     );
   if (finished)
@@ -173,7 +230,11 @@ export function Flashcards({
         </div>
         <span className="eyebrow">ЕЩЁ ОДИН ШАГ ВПЕРЁД</span>
         <h2>Слова становятся ближе.</h2>
-        <p>Практика завершена. Ваш прогресс уже сохранён.</p>
+        <p>
+          {storageError
+            ? "Практика завершена. Прогресс хранится в этой вкладке: сохраните резервную копию через предупреждение вверху страницы."
+            : "Практика завершена. Ваш прогресс уже сохранён в этом браузере."}
+        </p>
         <div className="finish-stats">
           <div>
             <strong>{deck.length}</strong>
@@ -214,7 +275,14 @@ export function Flashcards({
             {index + 1} <span className="faint">/ {deck.length}</span>
           </span>
         </div>
-        <div className="thin-progress">
+        <div
+          className="thin-progress"
+          role="progressbar"
+          aria-label="Пройдено карточек"
+          aria-valuemin={0}
+          aria-valuemax={deck.length}
+          aria-valuenow={index + (answer !== null ? 1 : 0)}
+        >
           <span style={{ width: `${(index / deck.length) * 100}%` }} />
         </div>
         <div className="flash-illustration">
@@ -235,10 +303,12 @@ export function Flashcards({
           </button>
         </div>
         <div className="flash-content">
-          <h2>Какое слово здесь спрятано?</h2>
+          <h2 ref={question} tabIndex={-1}>
+            Какое слово здесь спрятано?
+          </h2>
           <p className="muted">
-            Выберите подходящий ответ. Правильных вариантов может быть
-            несколько.
+            Выберите один подходящий ответ. После ответа покажем все подходящие
+            синонимы и перевод.
           </p>
           <div className="answer-grid">
             {options.map((option, i) => {
@@ -248,6 +318,12 @@ export function Flashcards({
               return (
                 <button
                   key={option}
+                  lang="en"
+                  aria-label={
+                    answer === null
+                      ? option
+                      : `${option}${correct ? " — правильный вариант" : wrong ? " — неверный ответ" : ""}${answer === option ? ", ваш ответ" : ""}`
+                  }
                   disabled={answer !== null}
                   className={`answer-option ${correct ? "correct" : ""} ${wrong ? "wrong" : ""}`}
                   onClick={() => choose(option)}
@@ -301,7 +377,12 @@ export function Flashcards({
                 ))}
               </p>
               {word.example && (
-                <p className="feedback-example">{word.example}</p>
+                <p className="feedback-example" lang="en">
+                  {word.example}
+                </p>
+              )}
+              {word.exampleRu && (
+                <p className="feedback-translation">{word.exampleRu}</p>
               )}
             </div>
           ) : (
@@ -370,7 +451,7 @@ export function Flashcards({
 }
 function PhraseDetails({ phrase }: { phrase: Phrase }) {
   return (
-    <div className="phrase-details">
+    <div className="phrase-details" id={`details-${phrase.id}`}>
       {phrase.generated && (
         <p className="generated-note">
           <Sparkles size={14} />
@@ -442,7 +523,8 @@ export function Phrases({
   onContext,
 }: StudyProps) {
   const [query, setQuery] = useState("");
-  const available = useCapabilities();
+  const connection = useServiceStatus();
+  const { available } = connection;
   const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const request = useRef<AbortController | null>(null);
@@ -580,6 +662,7 @@ export function Phrases({
           Слово из моего списка
         </button>
       </div>
+      <ServiceNotice connection={connection} />
       <div className="assistant-strip">
         <span>
           {available
@@ -589,6 +672,7 @@ export function Phrases({
         <button
           className="text-button gold"
           disabled={!available || !query.trim() || generating}
+          aria-busy={generating}
           onClick={() => void findMore()}
         >
           {generating ? (
@@ -610,6 +694,7 @@ export function Phrases({
             <button
               key={v}
               className={query === v && !onlySaved ? "active" : ""}
+              aria-pressed={query === v && !onlySaved}
               onClick={() => {
                 setQuery(v);
                 setOnlySaved(false);
@@ -621,6 +706,7 @@ export function Phrases({
         </div>
         <button
           className={`text-button ${onlySaved ? "gold" : ""}`}
+          aria-pressed={onlySaved}
           onClick={() => setOnlySaved(!onlySaved)}
         >
           <Bookmark size={15} fill={onlySaved ? "currentColor" : "none"} />
@@ -648,7 +734,7 @@ export function Phrases({
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div className="phrase-title">
-                <h3>
+                <h3 lang="en">
                   {p.text}
                   <button
                     className="inline-sound"
@@ -668,6 +754,8 @@ export function Phrases({
               </div>
               <button
                 className={`button learn-phrase ${store.phraseIds.includes(p.id) ? "saved" : "secondary"}`}
+                aria-pressed={store.phraseIds.includes(p.id)}
+                aria-label={`${store.phraseIds.includes(p.id) ? "Не изучать" : "Учить"}: ${p.text}`}
                 onClick={() => toggle(p)}
               >
                 {store.phraseIds.includes(p.id) ? (
@@ -680,6 +768,7 @@ export function Phrases({
               <button
                 className={`expand-button ${open === p.id ? "expanded" : ""}`}
                 aria-expanded={open === p.id}
+                aria-controls={open === p.id ? `details-${p.id}` : undefined}
                 aria-label={`Подробнее: ${p.text}`}
                 onClick={() => setOpen(open === p.id ? null : p.id)}
               >
@@ -711,8 +800,9 @@ export function Phrases({
             {onlySaved ? "Пока без сохранённых выражений" : "Здесь пока тихо"}
           </h2>
           <p>
-            В стартовой подборке нет совпадений. Попробуйте time, heart, book,
-            forest или ice.
+            {onlySaved
+              ? "Нажмите «Учить» у подходящего выражения — оно появится здесь и в вашем словаре. Если включён поиск, попробуйте очистить его."
+              : "В стартовой подборке нет совпадений. Попробуйте time, heart, book, forest или ice."}
           </p>
           <button
             className="button secondary"
@@ -750,7 +840,8 @@ export function Reading({
           (w) => w.status === (mode === "review" ? "learned" : "learning"),
         );
   const passages = [...PASSAGES, ...store.customPassages];
-  const available = useCapabilities();
+  const connection = useServiceStatus();
+  const { available } = connection;
   const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const request = useRef<AbortController | null>(null);
@@ -778,6 +869,8 @@ export function Reading({
         <button
           key={i}
           className={`reading-word ${part.word.status === "learned" ? "known" : "learning"} ${selected?.id === part.word.id ? "selected" : ""}`}
+          aria-label={`${part.text} — показать значение`}
+          aria-pressed={selected?.id === part.word.id}
           onClick={() => setSelected(part.word!)}
         >
           {part.text}
@@ -859,13 +952,14 @@ export function Reading({
         <button
           className="translation-toggle"
           aria-expanded={showTranslation}
+          aria-controls={showTranslation ? "reading-translation" : undefined}
           onClick={() => setShowTranslation(!showTranslation)}
         >
           {showTranslation ? "Скрыть перевод" : "Показать перевод"}
           <ChevronDown size={16} />
         </button>
         {showTranslation && (
-          <div className="reading-translation">
+          <div className="reading-translation" id="reading-translation">
             {passage.translation.split("\n\n").map((p, i) => (
               <p key={i}>{p}</p>
             ))}
@@ -921,11 +1015,13 @@ export function Reading({
             ИСТОРИЯ ИЗ ВАШИХ СЛОВ
           </span>
           <p>Новый небольшой текст с лексикой из выбранного режима.</p>
+          <ServiceNotice connection={connection} />
           <button
             className="button secondary full"
             disabled={
               !available || generating || !relevant.some((w) => w.translation)
             }
+            aria-busy={generating}
             onClick={() => void createReading()}
           >
             {generating ? (
@@ -935,10 +1031,11 @@ export function Reading({
             )}
             {generating ? "Пишем историю…" : "Создать текст"}
           </button>
-          {!available && (
-            <span className="generator-caption">
-              Доступно при подключении помощника. Ниже — готовые истории.
-            </span>
+          {!relevant.some((w) => w.translation) && (
+            <p className="generator-caption">
+              В этом режиме нет слов с переводом. Добавьте слова или выберите
+              другой режим. Готовые истории можно читать сразу.
+            </p>
           )}
           {generationError && (
             <p className="form-error" role="alert">
@@ -955,7 +1052,12 @@ export function Reading({
           </div>
         </div>
         {selected ? (
-          <div className="panel reading-definition">
+          <div
+            className="panel reading-definition"
+            role="region"
+            aria-label={`Значение: ${selected.word}`}
+            aria-live="polite"
+          >
             <div className="section-label">
               <span className="eyebrow">СЛОВО ИЗ ТЕКСТА</span>
               <button
@@ -1012,6 +1114,7 @@ export function Reading({
             <button
               key={p.id}
               className={p.id === passage.id ? "active" : ""}
+              aria-pressed={p.id === passage.id}
               onClick={() => {
                 setPassageId(p.id);
                 setSelected(null);
