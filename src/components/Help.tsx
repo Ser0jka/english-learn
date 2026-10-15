@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Sparkles, BookOpen, ArrowUpRight } from "lucide-react";
 import type { HelpContext } from "../types";
 import Modal from "./Modal";
-import { useServiceStatus } from "../useMaterials";
+import { useServiceStatus, serializeHelpContext } from "../useMaterials";
 
 import ServiceNotice from "./ServiceNotice";
 
@@ -97,12 +97,7 @@ export default function Help({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question,
-          context: JSON.stringify({
-            ...context,
-            word: context.word
-              ? { ...context.word, image: undefined }
-              : undefined,
-          }),
+          context: serializeHelpContext(context, question),
         }),
         signal: AbortSignal.any([
           abort.current.signal,

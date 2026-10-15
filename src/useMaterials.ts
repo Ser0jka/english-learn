@@ -106,3 +106,34 @@ export async function compactImage(src: string): Promise<string> {
     );
   return result;
 }
+
+// Respect both the 12,000-character context limit and the 24 KiB HTTP body limit.
+export function serializeHelpContext(
+  context: import("./types").HelpContext,
+  question: string,
+): string {
+  const omitImage = (key: string, value: unknown) =>
+    key === "image" ? undefined : value;
+  const full = JSON.stringify(context, omitImage);
+  const size = (serialized: string) =>
+    new TextEncoder().encode(JSON.stringify({ question, context: serialized }))
+      .length;
+  const fits = (serialized: string) =>
+    serialized.length <= 12000 && size(serialized) <= 23000;
+  if (fits(full)) return full;
+  let max = 3000;
+  while (max >= 1) {
+    const bounded = JSON.stringify(
+      { ...context, contextTruncated: true },
+      (key, value: unknown) =>
+        key === "image"
+          ? undefined
+          : typeof value === "string"
+            ? value.slice(0, max)
+            : value,
+    );
+    if (fits(bounded)) return bounded;
+    max = Math.floor(max / 2);
+  }
+  throw new Error("Вопрос слишком большой для отправки. Сократите его.");
+}

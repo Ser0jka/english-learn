@@ -41,6 +41,7 @@ import {
 import {
   loadStore,
   saveStore,
+  StorageConflictError,
   createBackup,
   plural,
   localDay,
@@ -168,18 +169,42 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [wordFilter, setWordFilter] = useState("all");
   const recovery = useRef(false);
+  const storageSnapshot = useRef(initial.raw);
+  const storageConflict = useRef(false);
+  useEffect(() => {
+    const handle = (event: StorageEvent) => {
+      if (
+        (event.key === STORAGE_KEY || event.key === null) &&
+        event.newValue !== storageSnapshot.current
+      ) {
+        storageConflict.current = true;
+        setStorageError(new StorageConflictError().message);
+      }
+    };
+    window.addEventListener("storage", handle);
+    return () => window.removeEventListener("storage", handle);
+  }, []);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (initial.error && store === initial.state) return;
+    if (
+      storageConflict.current ||
+      (store === initial.state && (initial.error || initial.raw !== null))
+    )
+      return;
     try {
       if (initial.error && !recovery.current) {
         const old = localStorage.getItem(STORAGE_KEY);
         if (old) localStorage.setItem(`${STORAGE_KEY}.recovery`, old);
         recovery.current = true;
       }
-      saveStore(store);
+      storageSnapshot.current = saveStore(store, storageSnapshot.current);
       setStorageError("");
-    } catch {
+    } catch (error) {
+      if (error instanceof StorageConflictError) {
+        storageConflict.current = true;
+        setStorageError(error.message);
+        return;
+      }
       setStorageError(
         "Память браузера недоступна или заполнена. Экспортируйте словарь, чтобы сохранить изменения.",
       );
@@ -295,7 +320,13 @@ export default function App() {
         Перейти к содержимому
       </a>
       {mobile && (
-        <div className="sidebar-backdrop" onClick={() => setMobile(false)} />
+        <button
+          className="sidebar-backdrop"
+          type="button"
+          tabIndex={-1}
+          aria-label="Скрыть навигацию"
+          onClick={() => setMobile(false)}
+        />
       )}
       <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
         <a

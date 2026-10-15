@@ -43,6 +43,7 @@ import {
   canPractice,
   maskedContext,
   maskedDefinition,
+  meaningKey,
   speak,
   validPhrase,
   validPassage,
@@ -68,6 +69,7 @@ export function Flashcards({
   storageError,
   now,
 }: StudyProps) {
+  const vocabulary = useRef(store.words);
   const [deck, setDeck] = useState(() =>
     queueFor(store.words, mode, store.interests, now).filter(canPractice),
   );
@@ -98,7 +100,7 @@ export function Flashcards({
     );
   }, [word, answer, onContext]);
   const options = useMemo(
-    () => (word ? optionsFor(word, store.words) : []),
+    () => (word ? optionsFor(word, vocabulary.current) : []),
     [word],
   );
   const correctAnswers = word ? acceptedAnswers(word) : [];
@@ -142,6 +144,7 @@ export function Flashcards({
     setAnswer(null);
   }
   function restart() {
+    vocabulary.current = store.words;
     setDeck(
       queueFor(store.words, mode, store.interests, Date.now()).filter(
         canPractice,
@@ -699,7 +702,7 @@ export function Phrases({
           ? s.phraseIds.filter((id) => id !== p.id)
           : [...s.phraseIds, p.id],
         words: saved
-          ? s.words.filter((w) => w.id !== `phrase-${p.id}`)
+          ? s.words.filter((w) => meaningKey(w) !== meaningKey(word))
           : mergeWords(s.words, [
               {
                 ...word,

@@ -2,11 +2,14 @@ import {
   CATALOG,
   INITIAL_WORDS,
   PHRASES,
+  PASSAGES,
   type Word,
   type Topic,
   type Phrase,
   type Passage,
 } from "./data";
+import { newId } from "./id";
+
 export interface PracticeLog {
   at: number;
   wordId: string;
@@ -163,8 +166,10 @@ export function validateStore(value: unknown): Store {
   if (
     !Array.isArray(customPhrases) ||
     !customPhrases.every(validPhrase) ||
+    customPhrases.some((p) => PHRASES.some((b) => b.id === p.id)) ||
     !Array.isArray(customPassages) ||
     !customPassages.every(validPassage) ||
+    customPassages.some((p) => PASSAGES.some((b) => b.id === p.id)) ||
     new Set(customPhrases.map((p) => p.id)).size !== customPhrases.length ||
     new Set(customPassages.map((p) => p.id)).size !== customPassages.length
   ) {
@@ -185,23 +190,46 @@ export function validateStore(value: unknown): Store {
       : { dailyGoal: value.dailyGoal as number }),
   };
 }
-export function loadStore(): { state: Store; error: string } {
+export function loadStore(): {
+  state: Store;
+  error: string;
+  raw: string | null;
+} {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    raw = localStorage.getItem(STORAGE_KEY);
     return {
       state: raw ? validateStore(JSON.parse(raw)) : emptyStore(),
       error: "",
+      raw,
     };
   } catch {
     return {
       state: emptyStore(),
+      raw,
       error:
         "Не удалось прочитать сохранённый словарь. Загружена стартовая подборка. Исходные данные не перезаписаны; перед изменениями проверьте резервную копию.",
     };
   }
 }
-export function saveStore(state: Store): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+export class StorageConflictError extends Error {
+  constructor() {
+    super(
+      "Словарь изменён в другой вкладке. Экспортируйте свои изменения и перезагрузите страницу, чтобы открыть сохранённую версию.",
+    );
+    this.name = "StorageConflictError";
+  }
+}
+export function saveStore(state: Store, expectedRaw?: string | null): string {
+  validateStore(state);
+  if (
+    expectedRaw !== undefined &&
+    localStorage.getItem(STORAGE_KEY) !== expectedRaw
+  )
+    throw new StorageConflictError();
+  const raw = JSON.stringify(state);
+  localStorage.setItem(STORAGE_KEY, raw);
+  return raw;
 }
 export function createBackup(state: Store): string {
   return JSON.stringify(
@@ -244,6 +272,7 @@ export function removeWord(state: Store, id: string): Store {
 }
 export function mergeWords(existing: Word[], incoming: Word[]) {
   const seen = new Set(existing.map(meaningKey));
+  const ids = new Set(existing.map((w) => w.id));
   const added = incoming.filter((w) => {
     const key = meaningKey(w);
     if (seen.has(key)) return false;
@@ -251,7 +280,15 @@ export function mergeWords(existing: Word[], incoming: Word[]) {
     return true;
   });
   return {
-    words: [...existing, ...added],
+    words: [
+      ...existing,
+      ...added.map((w) => {
+        let id = w.id;
+        while (ids.has(id) || id.length > 200) id = newId();
+        ids.add(id);
+        return id === w.id ? w : { ...w, id };
+      }),
+    ],
     added: added.length,
     duplicates: incoming.length - added.length,
   };
@@ -319,7 +356,7 @@ export function makeWord(
       topic: "everyday" as const,
       partOfSpeech: "unknown" as const,
     }),
-    id: crypto.randomUUID(),
+    id: newId(),
     word: normalize(word),
     translation: translation.trim() || known?.translation || "",
     status,
@@ -586,7 +623,7 @@ export function recordPractice(
     return state;
   const source = existing || {
     ...snapshot,
-    id: crypto.randomUUID(),
+    id: newId(),
     addedAt: now,
   };
   const updated = reviewWord(source, correct, now);

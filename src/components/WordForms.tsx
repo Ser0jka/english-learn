@@ -86,8 +86,9 @@ export function AddWords({
       setError("Эти слова уже есть в вашем словаре.");
       return;
     }
-    setStore((s) => ({ ...s, words: mergeWords(s.words, words).words }));
-    const created = words.find(
+    const prepared = result.words.slice(store.words.length);
+    setStore((s) => ({ ...s, words: mergeWords(s.words, prepared).words }));
+    const created = prepared.find(
       (w) => !store.words.some((v) => meaningKey(v) === meaningKey(w)),
     );
     notify(
@@ -130,6 +131,7 @@ export function AddWords({
       <div
         className="form-tabs"
         role="tablist"
+        tabIndex={-1}
         aria-label="Способ добавления слов"
         onKeyDown={(e) => {
           if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
@@ -555,6 +557,7 @@ export function WordEditor({
           <input
             maxLength={300}
             value={edit.translation}
+            disabled={generating || reading}
             onChange={(e) => setEdit({ ...edit, translation: e.target.value })}
           />
         </label>
@@ -673,7 +676,21 @@ export function WordEditor({
             {error}
           </p>
         )}
-        <button className="text-button gold" onClick={onHelp}>
+        <button
+          className="text-button gold"
+          onClick={() => {
+            if (
+              JSON.stringify(edit) !== JSON.stringify(word) ||
+              synonymText !== word.synonyms.join(", ")
+            ) {
+              setError(
+                "Сохраните изменения перед открытием справки, чтобы они не потерялись.",
+              );
+              return;
+            }
+            onHelp();
+          }}
+        >
           <CircleHelp size={16} />
           Спросить об этом слове
         </button>
@@ -755,6 +772,9 @@ export function WordEditor({
               setStore((s) => ({
                 ...s,
                 words: s.words.map((w) => (w.id === word.id ? next : w)),
+                phraseIds: changed
+                  ? removeWord(s, word.id).phraseIds
+                  : s.phraseIds,
               }));
               notify("Слово обновлено");
               onClose();

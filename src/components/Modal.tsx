@@ -69,6 +69,7 @@ export default function Modal({
   return createPortal(
     <div
       className="modal-backdrop"
+      role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

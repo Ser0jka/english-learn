@@ -243,3 +243,21 @@ describe("generated content integrity", () => {
     expect((await response.json()).phrases).toHaveLength(1);
   });
 });
+it("rejects a generated translation that cannot be saved as a vocabulary meaning", async () => {
+  const mock = mockCompletion({
+    phrases: [
+      {
+        text: "safe phrase",
+        translation: "я".repeat(301),
+        usage: "Употребление",
+        exceptions: "Нюансы",
+        example: "Example.",
+        exampleRu: "Пример.",
+      },
+    ],
+  });
+  expect((await post("/api/materials/phrases", { word: "safe" })).status).toBe(
+    502,
+  );
+  expect(mock).toHaveBeenCalledOnce();
+});

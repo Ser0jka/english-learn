@@ -185,7 +185,7 @@ describe("supplemental material persistence", () => {
     const saved = {
       ...emptyStore(),
       customPhrases: [{ ...PHRASES[0], id: "generated-test", generated: true }],
-      customPassages: [PASSAGES[0]],
+      customPassages: [{ ...PASSAGES[0], id: "custom-reading" }],
     };
     vi.stubGlobal("localStorage", { getItem: () => JSON.stringify(saved) });
     try {

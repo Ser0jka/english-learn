@@ -22,6 +22,7 @@ async function completion(messages, json = false) {
   if (url.protocol !== "https:") throw new Error("HTTPS required");
   const response = await fetch(url, {
     method: "POST",
+    redirect: "error",
     signal: AbortSignal.timeout(45000),
     headers: {
       "Content-Type": "application/json",
@@ -57,7 +58,9 @@ function generatedPhrase(value) {
       "exceptions",
       "example",
       "exampleRu",
-    ].every((k) => text(value[k], k === "text" ? 100 : 1500))
+    ].every((k) =>
+      text(value[k], k === "text" ? 100 : k === "translation" ? 300 : 1500),
+    )
   );
 }
 const system =
@@ -237,6 +240,7 @@ export function registerAi(app) {
       if (url.protocol !== "https:") throw new Error("HTTPS required");
       const response = await fetch(url, {
         method: "POST",
+        redirect: "error",
         signal: AbortSignal.timeout(120000),
         headers: {
           "Content-Type": "application/json",
