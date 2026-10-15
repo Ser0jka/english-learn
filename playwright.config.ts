@@ -1,14 +1,27 @@
 import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+const port = Number(process.env.E2E_PORT || 5180);
+const baseURL = `http://127.0.0.1:${port}`;
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir: `test-results/${process.env.E2E_PRODUCTION === "1" ? "production" : "development"}`,
+  reporter: [
+    ["list"],
+    [
+      "json",
+      {
+        outputFile: `test-results/${process.env.E2E_PRODUCTION === "1" ? "production" : "development"}/results.json`,
+      },
+    ],
+  ],
   fullyParallel: true,
   retries: 0,
-  use: { baseURL: "http://127.0.0.1:5173", trace: "retain-on-failure" },
+  use: { baseURL, trace: "retain-on-failure" },
   webServer: {
-    command: "npm run dev",
-    url: "http://127.0.0.1:5173/api/health",
-    reuseExistingServer: !process.env.CI,
+    command: process.env.E2E_PRODUCTION === "1" ? "npm start" : "npm run dev",
+    env: { PORT: String(port), LEXI_API_KEY: "", LEXI_IMAGE_API_KEY: "" },
+    url: `${baseURL}/api/health`,
+    reuseExistingServer: false,
     timeout: 30000,
   },
   projects: [

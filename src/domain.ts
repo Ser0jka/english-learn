@@ -1,6 +1,7 @@
 import {
   CATALOG,
   INITIAL_WORDS,
+  PHRASES,
   type Word,
   type Mode,
   type Topic,
@@ -33,70 +34,177 @@ export const emptyStore = (): Store => ({
 });
 export const normalize = (s: string) =>
   s.trim().toLocaleLowerCase("en").replace(/\s+/g, " ");
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const shortText = (
+  value: unknown,
+  max: number,
+  empty = false,
+): value is string =>
+  typeof value === "string" &&
+  value.length <= max &&
+  (empty || value.trim().length > 0);
+const timestamp = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isSafeInteger(value) &&
+  value >= 0 &&
+  value <= 8640000000000000;
+const httpsUrl = (value: unknown): value is string => {
+  if (!shortText(value, 2000)) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+};
 export function validWord(value: unknown): value is Word {
-  if (!value || typeof value !== "object") return false;
-  const w = value as Word;
+  if (!isRecord(value)) return false;
   return (
+    shortText(value.id, 200) &&
+    shortText(value.word, 100) &&
+    /[a-z]/i.test(value.word) &&
+    shortText(value.translation, 300, true) &&
     [
-      "id",
-      "word",
-      "translation",
       "phonetic",
       "definition",
       "example",
       "exampleRu",
       "concept",
       "level",
-    ].every((k) => typeof w[k as keyof Word] === "string") &&
-    ["learning", "learned"].includes(w.status) &&
-    ["travel", "everyday", "ideas"].includes(w.topic) &&
-    Array.isArray(w.synonyms) &&
-    w.synonyms.every((s) => typeof s === "string") &&
-    [w.successes, w.dueAt, w.addedAt].every(
-      (n) => typeof n === "number" && Number.isFinite(n) && n >= 0,
+    ].every((k) => shortText(value[k], 4000, true)) &&
+    (value.status === "learning" || value.status === "learned") &&
+    (value.topic === "travel" ||
+      value.topic === "everyday" ||
+      value.topic === "ideas") &&
+    Array.isArray(value.synonyms) &&
+    value.synonyms.length <= 20 &&
+    value.synonyms.every(
+      (v) =>
+        shortText(v, 100) && normalize(v) !== normalize(value.word as string),
     ) &&
-    (w.image === undefined ||
-      (typeof w.image === "string" &&
-        /^data:image\/(png|jpeg|webp);base64,/.test(w.image)))
+    new Set(value.synonyms.map((v) => normalize(v as string))).size ===
+      value.synonyms.length &&
+    typeof value.successes === "number" &&
+    Number.isSafeInteger(value.successes) &&
+    value.successes >= 0 &&
+    timestamp(value.dueAt) &&
+    timestamp(value.addedAt) &&
+    (value.image === undefined ||
+      (shortText(value.image, 900000) &&
+        /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=\r\n]+$/.test(
+          value.image,
+        )))
   );
+}
+export function validateStore(value: unknown): Store {
+  if (
+    !isRecord(value) ||
+    value.version !== 1 ||
+    !Array.isArray(value.words) ||
+    value.words.length > 10000 ||
+    !value.words.every(validWord) ||
+    new Set(value.words.map((w) => w.id)).size !== value.words.length ||
+    new Set(value.words.map((w) => normalize(w.word))).size !==
+      value.words.length ||
+    !Array.isArray(value.phraseIds) ||
+    !value.phraseIds.every((v) => shortText(v, 200)) ||
+    !Array.isArray(value.logs) ||
+    value.logs.length > 100000 ||
+    !value.logs.every(
+      (l) =>
+        isRecord(l) &&
+        timestamp(l.at) &&
+        shortText(l.wordId, 200) &&
+        typeof l.correct === "boolean",
+    ) ||
+    !Array.isArray(value.interests) ||
+    !value.interests.every((i) =>
+      ["everyday", "travel", "ideas"].includes(i as string),
+    )
+  ) {
+    throw new Error(
+      "Резервная копия содержит некорректные данные словаря или прогресса.",
+    );
+  }
+  const customPhrases =
+    value.customPhrases === undefined ? [] : value.customPhrases;
+  const customPassages =
+    value.customPassages === undefined ? [] : value.customPassages;
+  if (
+    !Array.isArray(customPhrases) ||
+    !customPhrases.every(validPhrase) ||
+    !Array.isArray(customPassages) ||
+    !customPassages.every(validPassage) ||
+    new Set(customPhrases.map((p) => p.id)).size !== customPhrases.length ||
+    new Set(customPassages.map((p) => p.id)).size !== customPassages.length
+  ) {
+    throw new Error(
+      "Резервная копия содержит некорректные выражения или тексты.",
+    );
+  }
+  return {
+    version: 1,
+    words: value.words,
+    phraseIds: [...new Set(value.phraseIds as string[])],
+    logs: value.logs as unknown as PracticeLog[],
+    interests: [...new Set(value.interests as Topic[])],
+    customPhrases,
+    customPassages,
+  };
 }
 export function loadStore(): { state: Store; error: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { state: emptyStore(), error: "" };
-    const s = JSON.parse(raw) as Store;
-    if (
-      s.version !== 1 ||
-      !Array.isArray(s.words) ||
-      !s.words.every(validWord) ||
-      !Array.isArray(s.phraseIds) ||
-      !s.phraseIds.every((id) => typeof id === "string") ||
-      !Array.isArray(s.logs) ||
-      !s.logs.every(
-        (l) =>
-          l &&
-          Number.isFinite(l.at) &&
-          typeof l.wordId === "string" &&
-          typeof l.correct === "boolean",
-      ) ||
-      !Array.isArray(s.interests) ||
-      !s.interests.every((i) => ["everyday", "travel", "ideas"].includes(i))
-    )
-      throw new Error();
-    s.customPhrases = Array.isArray(s.customPhrases)
-      ? s.customPhrases.filter(validPhrase)
-      : [];
-    s.customPassages = Array.isArray(s.customPassages)
-      ? s.customPassages.filter(validPassage)
-      : [];
-    return { state: s, error: "" };
+    return {
+      state: raw ? validateStore(JSON.parse(raw)) : emptyStore(),
+      error: "",
+    };
   } catch {
     return {
       state: emptyStore(),
       error:
-        "Не удалось прочитать сохранённый словарь. Загружена стартовая подборка. Перед изменениями проверьте резервную копию.",
+        "Не удалось прочитать сохранённый словарь. Загружена стартовая подборка. Исходные данные не перезаписаны; перед изменениями проверьте резервную копию.",
     };
   }
+}
+export function saveStore(state: Store): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+export function createBackup(state: Store): string {
+  return JSON.stringify(
+    {
+      ...state,
+      backupType: "lexi-workspace",
+      exportedAt: new Date().toISOString(),
+    },
+    null,
+    2,
+  );
+}
+export function parseBackup(text: string): Store | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch {
+    return null;
+  }
+  if (!isRecord(data) || data.backupType !== "lexi-workspace") return null;
+  return validateStore(data);
+}
+export function removeWord(state: Store, id: string): Store {
+  const word = state.words.find((w) => w.id === id);
+  if (!word) return state;
+  const associated = new Set(
+    [...PHRASES, ...state.customPhrases]
+      .filter((p) => normalize(p.text) === normalize(word.word))
+      .map((p) => p.id),
+  );
+  return {
+    ...state,
+    words: state.words.filter((w) => w.id !== id),
+    phraseIds: state.phraseIds.filter((p) => !associated.has(p)),
+  };
 }
 export function queueFor(
   words: Word[],
@@ -116,7 +224,7 @@ export function queueFor(
     .filter((w) =>
       mode === "learn"
         ? w.status === "learning"
-        : w.status === "learned" && w.dueAt <= now,
+        : (w.status === "learned" || w.dueAt > 0) && w.dueAt <= now,
     )
     .sort((a, b) => a.dueAt - b.dueAt);
 }
@@ -143,7 +251,13 @@ export function reviewWord(
   };
 }
 export function optionsFor(word: Word): string[] {
-  const correct = [word.word, ...word.synonyms];
+  const correct = [
+    ...new Map(
+      [word.word, ...word.synonyms]
+        .filter((v) => v.trim())
+        .map((v) => [normalize(v), v]),
+    ).values(),
+  ];
   const wrong = CATALOG.filter(
     (w) => !correct.includes(w.word) && w.concept !== word.concept,
   ).map((w) => w.word);
@@ -177,11 +291,17 @@ export function mergeWords(existing: Word[], incoming: Word[]) {
 }
 function parseRows(text: string): string[][] {
   const first = text.split(/\r?\n/)[0];
-  const delimiter = first.includes("\t")
-    ? "\t"
-    : first.includes(";")
-      ? ";"
-      : ",";
+  const counts: Record<string, number> = { "\t": 0, ";": 0, ",": 0 };
+  let inQuotes = false;
+  for (let i = 0; i < first.length; i++) {
+    if (first[i] === '"') {
+      if (inQuotes && first[i + 1] === '"') i++;
+      else inQuotes = !inQuotes;
+    } else if (!inQuotes && Object.hasOwn(counts, first[i])) counts[first[i]]++;
+  }
+  const delimiter = Object.keys(counts).sort(
+    (a, b) => counts[b] - counts[a],
+  )[0];
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -254,11 +374,17 @@ export function parseImport(text: string): Word[] {
     let wordCol = 0,
       translationCol = 1,
       statusCol = 2;
+    if (!rows.length) throw new Error("В файле нет слов.");
     const headers = rows[0].map(normalize);
     const headerIndex = headers.findIndex((h) =>
       ["word", "слово", "english"].includes(h),
     );
-    if (headerIndex >= 0) {
+    if (
+      headerIndex >= 0 &&
+      headers.some((h) =>
+        ["translation", "перевод", "russian", "status", "статус"].includes(h),
+      )
+    ) {
       wordCol = headerIndex;
       translationCol = headers.findIndex((h) =>
         ["translation", "перевод", "russian"].includes(h),
@@ -300,7 +426,8 @@ export function parseImport(text: string): Word[] {
       выучено: "learned",
     };
     const status =
-      typeof row.status === "string"
+      typeof row.status === "string" &&
+      Object.hasOwn(statuses, normalize(row.status))
         ? statuses[normalize(row.status)]
         : row.status === undefined
           ? "learning"
@@ -345,12 +472,11 @@ export function speak(text: string) {
 }
 
 export function validPhrase(p: unknown): p is Phrase {
-  if (!p || typeof p !== "object") return false;
-  const v = p as Phrase;
+  if (!isRecord(p)) return false;
   return (
+    shortText(p.id, 200) &&
+    shortText(p.text, 100) &&
     [
-      "id",
-      "text",
       "translation",
       "usage",
       "exceptions",
@@ -358,27 +484,33 @@ export function validPhrase(p: unknown): p is Phrase {
       "example",
       "exampleRu",
       "frequencyLabel",
-    ].every((k) => typeof v[k as keyof Phrase] === "string") &&
-    Array.isArray(v.keywords) &&
-    v.keywords.every((w) => typeof w === "string") &&
-    Number.isFinite(v.frequency) &&
-    !!v.source &&
-    typeof v.source.label === "string" &&
-    typeof v.source.url === "string" &&
-    /^https:\/\//.test(v.source.url)
+    ].every((k) => shortText(p[k], 4000)) &&
+    Array.isArray(p.keywords) &&
+    p.keywords.every((k) => shortText(k, 100)) &&
+    typeof p.frequency === "number" &&
+    Number.isFinite(p.frequency) &&
+    p.frequency >= 0 &&
+    isRecord(p.source) &&
+    shortText(p.source.label, 300) &&
+    httpsUrl(p.source.url) &&
+    (p.generated === undefined || typeof p.generated === "boolean") &&
+    (p.quote === undefined ||
+      (isRecord(p.quote) &&
+        ["text", "translation", "author"].every((k) =>
+          shortText((p.quote as Record<string, unknown>)[k], 4000),
+        ) &&
+        httpsUrl(p.quote.url)))
   );
 }
 export function validPassage(p: unknown): p is Passage {
-  if (!p || typeof p !== "object") return false;
-  return [
-    "id",
-    "title",
-    "subtitle",
-    "text",
-    "translation",
-    "level",
-    "type",
-  ].every((k) => typeof (p as Record<string, unknown>)[k] === "string");
+  if (!isRecord(p)) return false;
+  return (
+    shortText(p.id, 200) &&
+    ["title", "subtitle"].every((k) => shortText(p[k], 200)) &&
+    ["text", "translation"].every((k) => shortText(p[k], 7000)) &&
+    shortText(p.level, 20) &&
+    shortText(p.type, 100)
+  );
 }
 
 export function plural(count: number, forms: [string, string, string]) {

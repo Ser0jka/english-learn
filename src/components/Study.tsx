@@ -24,7 +24,6 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import {
-  CATALOG,
   PASSAGES,
   PHRASES,
   type Word,
@@ -499,24 +498,24 @@ export function Phrases({
           )),
     )
     .sort((a, b) => a.frequency - b.frequency);
+  const contextPhrase = phrases.find((p) => p.id === open) || phrases[0];
   useEffect(() => {
-    const phrase = allPhrases.find((p) => p.id === open) || phrases[0];
     onContext(
-      phrase
-        ? { phrase }
+      contextPhrase
+        ? { phrase: contextPhrase }
         : {
             text: query
               ? `Выражения со словом ${query}`
               : "Английские устойчивые выражения",
           },
     );
-  }, [open, query, store.customPhrases, onContext]);
+  }, [contextPhrase, query, onContext]);
   function toggle(p: Phrase) {
     const saved = store.phraseIds.includes(p.id);
     setStore((s) => {
       const word = makeWord(p.text, p.translation);
-      const concept =
-        CATALOG.find((w) => p.keywords.includes(w.word))?.concept || "";
+      // An idiom's meaning is not the literal meaning of a keyword.
+      const concept = "";
       return {
         ...s,
         phraseIds: saved

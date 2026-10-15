@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Sparkles, BookOpen, ArrowUpRight } from "lucide-react";
 import type { HelpContext } from "../types";
 import Modal from "./Modal";
+import { useCapabilities } from "../useMaterials";
 
 export function referenceAnswer(
   context: HelpContext,
@@ -49,7 +50,7 @@ export default function Help({
   context: HelpContext;
   onClose: () => void;
 }) {
-  const [available, setAvailable] = useState(false);
+  const available = useCapabilities();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<
     Array<{ role: "user" | "assistant"; text: string }>
@@ -57,17 +58,7 @@ export default function Help({
   const [busy, setBusy] = useState(false);
   const scroll = useRef<HTMLDivElement>(null);
   const abort = useRef<AbortController | null>(null);
-  useEffect(() => {
-    const c = new AbortController();
-    fetch("/api/health", { signal: c.signal })
-      .then((r) => r.json())
-      .then((v) => setAvailable(Boolean(v.aiAvailable)))
-      .catch(() => {});
-    return () => {
-      c.abort();
-      abort.current?.abort();
-    };
-  }, []);
+  useEffect(() => () => abort.current?.abort(), []);
   useEffect(() => {
     scroll.current?.scrollTo({
       top: scroll.current.scrollHeight,
@@ -110,14 +101,27 @@ export default function Help({
         }),
         signal: abort.current.signal,
       });
-      const data = await result.json();
+      const data: unknown = await result.json();
+      if (
+        !data ||
+        typeof data !== "object" ||
+        (result.ok &&
+          (!("answer" in data) ||
+            typeof data.answer !== "string" ||
+            !data.answer.trim()))
+      )
+        throw new Error("Некорректный ответ помощника");
+      const answer =
+        result.ok && "answer" in data && typeof data.answer === "string"
+          ? data.answer
+          : "error" in data && typeof data.error === "string"
+            ? data.error
+            : "Не удалось получить ответ.";
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          text: result.ok
-            ? data.answer
-            : data.error || "Не удалось получить ответ.",
+          text: answer,
         },
       ]);
     } catch (e) {

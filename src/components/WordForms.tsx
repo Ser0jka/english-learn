@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Upload,
   Plus,
@@ -12,7 +12,15 @@ import {
   CircleHelp,
 } from "lucide-react";
 import { CATALOG, type Word, type Status } from "../data";
-import { makeWord, mergeWords, normalize, parseImport, speak } from "../domain";
+import {
+  makeWord,
+  mergeWords,
+  normalize,
+  parseImport,
+  parseBackup,
+  removeWord,
+  speak,
+} from "../domain";
 import type { StudyProps } from "../types";
 import Modal from "./Modal";
 import {
@@ -42,6 +50,14 @@ export function AddWords({
   const [pending, setPending] = useState(false);
   const [preview, setPreview] = useState<Word[] | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [restore, setRestore] = useState(false);
+  const backup = useMemo(() => {
+    try {
+      return parseBackup(text);
+    } catch {
+      return null;
+    }
+  }, [text]);
   function add(words: Word[]) {
     const result = mergeWords(store.words, words);
     if (!result.added) {
@@ -59,15 +75,16 @@ export function AddWords({
     setError("");
     setPreview(null);
     setText("");
-    if (file.size > 4 * 1024 * 1024) {
-      setError("Максимальный размер файла — 4 МБ.");
+    setRestore(false);
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Максимальный размер файла — 20 МБ.");
       return;
     }
     setPending(true);
     try {
       const content = await file.text();
       setText(content);
-      setPreview(parseImport(content));
+      setPreview(parseBackup(content)?.words || parseImport(content));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось прочитать файл.");
     } finally {
@@ -190,7 +207,7 @@ export function AddWords({
             <strong>
               {pending ? "Читаем файл…" : "Выберите файл со словами"}
             </strong>
-            <span>TXT, CSV или JSON · до 4 МБ</span>
+            <span>TXT, CSV или JSON · до 20 МБ</span>
           </button>
           <input
             ref={fileRef}
@@ -210,6 +227,7 @@ export function AddWords({
               onChange={(e) => {
                 setText(e.target.value);
                 setPreview(null);
+                setRestore(false);
               }}
               placeholder={
                 "forest; лес; learning\njourney; путешествие; learned"
@@ -221,6 +239,27 @@ export function AddWords({
             перевод и статус через точку с запятой. learning — учу, learned —
             выучил. Дубликаты пропустим.
           </p>
+          {backup && (
+            <div className="backup-preview">
+              <strong>Полная резервная копия</strong>
+              <p>
+                {backup.words.length} слов · {backup.logs.length} ответов ·{" "}
+                {backup.customPassages.length} дополнительных текстов
+              </p>
+              <label className="restore-choice">
+                <input
+                  type="checkbox"
+                  checked={restore}
+                  onChange={(e) => setRestore(e.target.checked)}
+                />
+                Восстановить весь прогресс и заменить текущую коллекцию
+              </label>
+              <small>
+                Без этой отметки добавятся только новые слова. Текущие данные
+                сохранятся.
+              </small>
+            </div>
+          )}
           {preview && (
             <div className="import-preview">
               <strong>Готово к импорту: {preview.length}</strong>
@@ -243,6 +282,13 @@ export function AddWords({
             disabled={pending || !text.trim()}
             onClick={() => {
               try {
+                const saved = parseBackup(text);
+                if (restore && saved) {
+                  setStore(saved);
+                  notify("Резервная копия восстановлена вместе с прогрессом");
+                  onClose();
+                  return;
+                }
                 add(preview || parseImport(text));
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Проверьте формат.");
@@ -250,7 +296,7 @@ export function AddWords({
             }}
           >
             <Upload size={17} />
-            Добавить слова
+            {restore && backup ? "Восстановить копию" : "Добавить слова"}
           </button>
         </div>
       )}
@@ -271,7 +317,7 @@ export function WordEditor({
   onHelp: () => void;
 }) {
   const [edit, setEdit] = useState({ ...word });
-  const available = useCapabilities();
+  const available = useCapabilities("image");
   const [generating, setGenerating] = useState(false);
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
@@ -320,7 +366,8 @@ export function WordEditor({
         reader.onerror = reject;
         reader.readAsDataURL(image);
       });
-      setEdit((s) => ({ ...s, image: url }));
+      const verifiedImage = await compactImage(url);
+      setEdit((s) => ({ ...s, image: verifiedImage }));
       setError("");
     } catch {
       setError("Не удалось прочитать изображение.");
@@ -455,10 +502,7 @@ export function WordEditor({
                 setConfirmDelete(true);
                 return;
               }
-              setStore((s) => ({
-                ...s,
-                words: s.words.filter((w) => w.id !== word.id),
-              }));
+              setStore((s) => removeWord(s, word.id));
               notify("Слово удалено");
               onClose();
             }}

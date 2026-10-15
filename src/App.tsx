@@ -41,6 +41,8 @@ import {
 } from "./data";
 import {
   loadStore,
+  saveStore,
+  createBackup,
   plural,
   localDay,
   mergeWords,
@@ -122,7 +124,7 @@ export default function App() {
         if (old) localStorage.setItem(`${STORAGE_KEY}.recovery`, old);
         recovery.current = true;
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+      saveStore(store);
       setStorageError("");
     } catch {
       setStorageError(
@@ -138,6 +140,42 @@ export default function App() {
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);
+  useEffect(() => {
+    if (!mobile) return;
+    const previous = document.activeElement as HTMLElement;
+    const before = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const controls = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(".sidebar button, .sidebar a"),
+      ).filter(
+        (el) =>
+          el.getClientRects().length &&
+          getComputedStyle(el).visibility !== "hidden",
+      );
+    document.querySelector<HTMLElement>(".mobile-close")?.focus();
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobile(false);
+      if (e.key === "Tab") {
+        const items = controls(),
+          first = items[0],
+          last = items.at(-1);
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handle);
+    return () => {
+      document.body.style.overflow = before;
+      document.removeEventListener("keydown", handle);
+      previous?.focus();
+    };
+  }, [mobile]);
   function go(next: Page) {
     setPage(next);
     window.location.hash = next;
@@ -150,27 +188,14 @@ export default function App() {
     timer.current = setTimeout(() => setToast(""), 4500);
   }
   function exportWords() {
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            version: 1,
-            exportedAt: new Date().toISOString(),
-            words: store.words,
-          },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
-    );
+    const blob = new Blob([createBackup(store)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `lexi-words-${localDay(Date.now())}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    notify("Словарь экспортирован в JSON");
+    notify("Словарь и весь прогресс сохранены в резервную копию");
   }
   const learning = store.words.filter((w) => w.status === "learning").length;
   const learned = store.words.length - learning;
@@ -270,11 +295,23 @@ export default function App() {
           </p>
         </div>
         <div className="sidebar-bottom">
-          <button className="nav-link" onClick={() => setSettings(true)}>
+          <button
+            className="nav-link"
+            onClick={() => {
+              setMobile(false);
+              setSettings(true);
+            }}
+          >
             <Settings2 size={18} />
             <span>Мои предпочтения</span>
           </button>
-          <button className="profile" onClick={() => setSettings(true)}>
+          <button
+            className="profile"
+            onClick={() => {
+              setMobile(false);
+              setSettings(true);
+            }}
+          >
             <span className="avatar">
               L<span />
             </span>
@@ -286,7 +323,7 @@ export default function App() {
           </button>
         </div>
       </aside>
-      <div className="main-shell">
+      <div className="main-shell" inert={mobile}>
         <header className="topbar">
           <div className="topbar-left">
             <button

@@ -8,6 +8,7 @@ let server: Server;
 let base: string;
 beforeEach(async () => {
   vi.stubEnv("LEXI_API_KEY", "test-only-key");
+  vi.stubEnv("LEXI_IMAGE_API_KEY", "");
   vi.stubEnv("LEXI_API_BASE", "https://api.example.test/v1");
   const app = express();
   app.use(express.json());
@@ -32,7 +33,7 @@ const post = async (route: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 const mockCompletion = (value: unknown) => {
-  const mock = vi.fn(
+  const mock = vi.fn<typeof fetch>(
     async () =>
       new Response(
         JSON.stringify({
@@ -78,7 +79,7 @@ describe("optional AI API", () => {
       context: "forest",
     });
     expect(await response.json()).toEqual({ answer: "Forest — лес." });
-    const body = JSON.parse(mock.mock.calls[0][1].body);
+    const body = JSON.parse(String(mock.mock.calls[0][1]?.body));
     expect(body.messages[1].content).toContain("forest");
     expect(body.messages[0].content).toContain("Не выдумывай");
   });
@@ -140,7 +141,7 @@ describe("optional AI API", () => {
     expect(passage.type).toBe("Учебный текст помощника");
     expect(passage.id).toMatch(/^ai-/);
     expect(
-      JSON.parse(mock.mock.calls[0][1].body).messages[1].content,
+      JSON.parse(String(mock.mock.calls[0][1]?.body)).messages[1].content,
     ).toContain("book");
   });
   it("rejects an empty reading vocabulary", async () => {
@@ -151,7 +152,7 @@ describe("optional AI API", () => {
     expect(mock).not.toHaveBeenCalled();
   });
   it("generates an image request with the intended meaning and returns only image data", async () => {
-    const mock = vi.fn(
+    const mock = vi.fn<typeof fetch>(
       async () =>
         new Response(JSON.stringify({ data: [{ b64_json: "dGVzdA==" }] }), {
           status: 200,
@@ -166,7 +167,7 @@ describe("optional AI API", () => {
     expect((await response.json()).image).toBe(
       "data:image/webp;base64,dGVzdA==",
     );
-    const body = JSON.parse(mock.mock.calls[0][1].body);
+    const body = JSON.parse(String(mock.mock.calls[0][1]?.body));
     expect(body.prompt).toContain("forest");
     expect(body.prompt).toContain("лес");
     expect(body.output_format).toBe("webp");
@@ -181,5 +182,64 @@ describe("optional AI API", () => {
       });
     expect(response!.status).toBe(429);
     expect(mock).toHaveBeenCalledTimes(12);
+  });
+});
+
+describe("provider capabilities", () => {
+  it("uses a separately configured image credential without requiring a text credential", async () => {
+    vi.stubEnv("LEXI_API_KEY", "");
+    vi.stubEnv("LEXI_IMAGE_API_KEY", "test-only-image-key");
+    const mock = vi.fn<typeof fetch>(async () =>
+      Response.json({ data: [{ b64_json: "dGVzdA==" }] }),
+    );
+    vi.stubGlobal("fetch", mock);
+    expect(
+      (
+        await post("/api/materials/image", {
+          word: "forest",
+          translation: "лес",
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (await post("/api/assistant", { question: "Вопрос", context: "forest" }))
+        .status,
+    ).toBe(503);
+  });
+  it("rejects an overlong generated phrase before it can invalidate the stored vocabulary", async () => {
+    mockCompletion({
+      phrases: [
+        {
+          text: "a".repeat(101),
+          translation: "перевод",
+          usage: "пример",
+          exceptions: "нюанс",
+          example: "Example.",
+          exampleRu: "Пример.",
+        },
+      ],
+    });
+    expect(
+      (await post("/api/materials/phrases", { word: "book" })).status,
+    ).toBe(502);
+  });
+});
+
+describe("generated content integrity", () => {
+  it("deduplicates repeated expressions from the provider", async () => {
+    const phrase = {
+      text: "take your time",
+      translation: "не торопись",
+      usage: "Без спешки.",
+      exceptions: "Разговорное.",
+      example: "Take your time.",
+      exampleRu: "Не торопись.",
+    };
+    mockCompletion({
+      phrases: [phrase, { ...phrase, text: "Take your time" }],
+    });
+    const response = await post("/api/materials/phrases", { word: "time" });
+    expect(response.status).toBe(200);
+    expect((await response.json()).phrases).toHaveLength(1);
   });
 });
