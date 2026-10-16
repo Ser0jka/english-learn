@@ -3412,3 +3412,49 @@ legend {
   background: var(--surface-warm);
   font-size: 14px;
 }
+
+/* A cited excerpt and its complete source remain readable on narrow screens. */
+.source-quote {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.source-quote .context-excerpt {
+  display: block;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  border-radius: 4px;
+}
+.source-quote figcaption {
+  margin-top: 14px;
+}
+.source-quote cite {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.source-quote .context-attribution {
+  margin: 4px 0 12px;
+}
+.source-quote .context-full-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 8px;
+  color: var(--gold);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.source-quote a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 5px;
+}
+.source-quote a:hover {
+  color: var(--gold-bright);
+}

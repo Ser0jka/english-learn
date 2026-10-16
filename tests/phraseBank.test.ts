@@ -64,5 +64,15 @@ it("keeps phrase source links and removal consistent across a complete backup", 
   const s = { ...emptyStore(), words: [w], phraseIds: [p.id] };
   expect(parseBackup(createBackup(s))).toEqual(s);
   expect(removeWord(s, w.id).phraseIds).toEqual([]);
-  expect(PHRASE_BANK.some((p) => p.quote)).toBe(false);
+  expect(PHRASE_BANK.filter((p) => p.quote)).toHaveLength(3);
+});
+it("attaches contextual evidence to the intended sense rather than every homonym", () => {
+  const variants = PHRASE_BANK.filter((p) => p.text === "give up");
+  expect(variants.length).toBeGreaterThan(1);
+  expect(
+    variants.find((p) => p.bankId === "00613393-v")?.quote?.text,
+  ).toContain("give up the point");
+  expect(
+    variants.filter((p) => p.bankId !== "00613393-v").every((p) => !p.quote),
+  ).toBe(true);
 });

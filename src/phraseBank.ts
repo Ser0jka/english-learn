@@ -1,6 +1,7 @@
 import manifest from "./generated/phrase-bank-manifest.json" with { type: "json" };
 import type { Phrase, Word } from "./data";
 import { fetchBank, registerBankRows, type BankRow } from "./wordBank";
+import { SOURCED_PHRASE_EXAMPLES } from "./phraseContexts";
 export const PHRASE_BANK_MANIFEST = manifest;
 export const PHRASE_BANK: Phrase[] = [];
 export const PHRASE_BANK_WORDS: Word[] = [];
@@ -37,6 +38,7 @@ export function registerPhraseBank(input: unknown) {
     origin: "Подтверждённой истории происхождения в этом источнике нет.",
     example: w.example,
     exampleRu: "",
+    quote: SOURCED_PHRASE_EXAMPLES[`${w.bankId}:${w.word}`],
     source: {
       label: "Найти в Princeton WordNet",
       url: `https://wordnetweb.princeton.edu/perl/webwn?s=${encodeURIComponent(w.word)}`,

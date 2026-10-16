@@ -609,21 +609,58 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
       )}
       {phrase.example ? (
         <div className="phrase-example">
-          <span className="eyebrow">ПРИМЕР</span>
+          <span className="eyebrow">
+            {phrase.dictionary
+              ? "СЛОВАРНЫЙ ПРИМЕР"
+              : phrase.generated
+                ? "УЧЕБНЫЙ ПРИМЕР ПОМОЩНИКА"
+                : "УЧЕБНЫЙ ПРИМЕР"}
+          </span>
           <p lang="en">“{phrase.example}”</p>
           {phrase.exampleRu && <span>{phrase.exampleRu}</span>}
         </div>
       ) : null}
       {phrase.quote && (
-        <div className="source-quote">
-          <span className="eyebrow">ИЗ ЛИТЕРАТУРЫ</span>
-          <blockquote>“{phrase.quote.text}”</blockquote>
+        <figure className="source-quote">
+          <span className="eyebrow">
+            {phrase.quote.kind === "article"
+              ? "ИЗ СТАТЬИ"
+              : phrase.quote.kind === "speech"
+                ? "ИЗ ВЫСТУПЛЕНИЯ"
+                : phrase.quote.kind === "play"
+                  ? "ИЗ ПЬЕСЫ"
+                  : "ИЗ КНИГИ"}
+          </span>
+          <blockquote lang="en">
+            <a
+              className="context-excerpt"
+              href={phrase.quote.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Прочитать «${phrase.quote.title || "источник отрывка"}» (новая вкладка)`}
+            >
+              “{phrase.quote.text}”
+            </a>
+          </blockquote>
           <p>{phrase.quote.translation}</p>
-          <a href={phrase.quote.url} target="_blank" rel="noreferrer">
-            {phrase.quote.author}
-            <ExternalLink size={13} />
-          </a>
-        </div>
+          <figcaption>
+            {phrase.quote.title && <cite>{phrase.quote.title}</cite>}
+            <p className="context-attribution">
+              {phrase.quote.author}
+              {phrase.quote.location && ` · ${phrase.quote.location}`}
+            </p>
+            {phrase.quote.note && <p>{phrase.quote.note}</p>}
+            <a
+              className="context-full-text"
+              href={phrase.quote.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Читать полный текст: ${phrase.quote.title || phrase.quote.author}, ${phrase.quote.author} (новая вкладка)`}
+            >
+              Читать полный текст <ExternalLink size={15} aria-hidden="true" />
+            </a>
+          </figcaption>
+        </figure>
       )}
       <a
         className="source-link"

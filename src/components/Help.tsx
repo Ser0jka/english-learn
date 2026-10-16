@@ -14,6 +14,8 @@ export function referenceAnswer(
   const q = question.toLowerCase();
   const { word, phrase } = context;
   if (phrase) {
+    if (/пример|контекст|предложен/.test(q) && phrase.quote)
+      return `“${phrase.quote.text}”\n${phrase.quote.translation}\n\n${[phrase.quote.title, phrase.quote.author, phrase.quote.location].filter(Boolean).join(" · ")}${phrase.quote.note ? `\n\n${phrase.quote.note}` : ""}\n\nПолный текст можно открыть по ссылке в справке выражения.`;
     if (
       preferAi &&
       phrase.dictionary &&

@@ -537,6 +537,7 @@ export function speak(text: string) {
 
 export function validPhrase(p: unknown): p is Phrase {
   if (!isRecord(p)) return false;
+  const quote = p.quote;
   return (
     shortText(p.id, 200) &&
     shortText(p.text, 100) &&
@@ -557,12 +558,18 @@ export function validPhrase(p: unknown): p is Phrase {
     shortText(p.source.label, 300) &&
     httpsUrl(p.source.url) &&
     (p.generated === undefined || typeof p.generated === "boolean") &&
-    (p.quote === undefined ||
-      (isRecord(p.quote) &&
+    (quote === undefined ||
+      (isRecord(quote) &&
         ["text", "translation", "author"].every((k) =>
-          shortText((p.quote as Record<string, unknown>)[k], 4000),
+          shortText(quote[k], 4000),
         ) &&
-        httpsUrl(p.quote.url)))
+        httpsUrl(quote.url) &&
+        (quote.kind === undefined ||
+          (typeof quote.kind === "string" &&
+            ["book", "article", "play", "speech"].includes(quote.kind))) &&
+        ["title", "location", "note"].every(
+          (k) => quote[k] === undefined || shortText(quote[k], 1000),
+        )))
   );
 }
 export function validPassage(p: unknown): p is Passage {

@@ -1,3 +1,5 @@
+import { SOURCED_PHRASE_EXAMPLES } from "./phraseContexts";
+
 export type Mode = "learn" | "review" | "new";
 export type Status = "learning" | "learned";
 export type Page = "home" | "cards" | "phrases" | "reading" | "words";
@@ -30,6 +32,16 @@ export interface Word {
   generated?: boolean;
   sourcePhraseId?: string;
 }
+export interface PhraseQuote {
+  text: string;
+  translation: string;
+  author: string;
+  url: string;
+  kind?: "book" | "article" | "play" | "speech";
+  title?: string;
+  location?: string;
+  note?: string;
+}
 export interface Phrase {
   bankId?: string;
   dictionary?: boolean;
@@ -47,7 +59,7 @@ export interface Phrase {
   example: string;
   exampleRu: string;
   source: { label: string; url: string };
-  quote?: { text: string; translation: string; author: string; url: string };
+  quote?: PhraseQuote;
 }
 const entries: Array<
   [
@@ -469,7 +481,11 @@ export const PHRASES: Phrase[] = [
     quote: {
       text: "And if you break the ice, and do this feat…",
       translation: "И если ты растопишь лёд и совершишь этот подвиг…",
-      author: "Уильям Шекспир, «Укрощение строптивой», I.2",
+      author: "Уильям Шекспир",
+      kind: "play",
+      title: "Укрощение строптивой / The Taming of the Shrew",
+      location: "Акт I, сцена 2",
+      note: "Транио обсуждает с Петруччо, кто первым возьмётся за непростую задачу. В пьесе образ преодоления преграды шире современного значения «начать непринуждённое общение».",
       url: "https://www.folger.edu/explore/shakespeares-works/the-taming-of-the-shrew/read/1/2/",
     },
   },
@@ -488,6 +504,7 @@ export const PHRASES: Phrase[] = [
       "Оборот отражает старое представление о сердце как о вместилище памяти и мысли. Точную дату появления современного английского выражения здесь не утверждаем.",
     example: "We learned the poem by heart at school.",
     exampleRu: "В школе мы выучили это стихотворение наизусть.",
+    quote: SOURCED_PHRASE_EXAMPLES["learn-by-heart"],
     source: {
       label: "Cambridge Dictionary",
       url: "https://dictionary.cambridge.org/dictionary/english/by-heart",
@@ -660,7 +677,11 @@ export const PHRASES: Phrase[] = [
     quote: {
       text: "All that glisters is not gold.",
       translation: "Не всё то золото, что блестит.",
-      author: "Уильям Шекспир, «Венецианский купец», II.7",
+      author: "Уильям Шекспир",
+      kind: "play",
+      title: "Венецианский купец / The Merchant of Venice",
+      location: "Акт II, сцена 7",
+      note: "Надпись в золотом ларце предостерегает от выбора по внешнему блеску. В оригинале glisters — старинный вариант современного glitters.",
       url: "https://www.folger.edu/explore/shakespeares-works/the-merchant-of-venice/read/2/7/",
     },
   },
