@@ -138,6 +138,7 @@ export default function App() {
     (!needsWordBank || wordLibrary.status === "ready") &&
     (!needsPhraseBank || storedPhraseLibrary.status === "ready");
   const [addOpen, setAddOpen] = useState(false);
+  const [phraseWord, setPhraseWord] = useState<Word | null>(null);
   const [generateWords, setGenerateWords] = useState(false);
   const appearance = store.appearance ?? DEFAULT_APPEARANCE;
   useEffect(() => applyAppearance(appearance), [appearance]);
@@ -286,6 +287,10 @@ export default function App() {
     window.location.hash = next;
     setMobile(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function expressionsFor(word: Word) {
+    setPhraseWord(word);
+    go("phrases");
   }
   function notify(message: string, action?: NoticeAction) {
     setToast(message);
@@ -674,7 +679,13 @@ export default function App() {
             ) : (
               <Flashcards key={mode} {...studyProps} />
             ))}
-          {page === "phrases" && <Phrases {...studyProps} />}
+          {page === "phrases" && (
+            <Phrases
+              key={phraseWord?.id || "browse"}
+              {...studyProps}
+              initialWord={phraseWord}
+            />
+          )}
           {page === "reading" && <Reading key={mode} {...studyProps} />}
           {page === "words" && (
             <>
@@ -793,6 +804,13 @@ export default function App() {
                       </div>
                     </button>
                     <div className="word-tile-footer">
+                      <button
+                        className="text-button word-phrase-link"
+                        aria-label={`Выражения со словом ${w.word} — ${w.translation}`}
+                        onClick={() => expressionsFor(w)}
+                      >
+                        <Quote size={16} /> Найти выражения
+                      </button>
                       <span className="level-badge">{w.level}</span>
                       <button
                         className="text-button"
@@ -915,6 +933,13 @@ export default function App() {
           notify={notify}
           onClose={() => setAddOpen(false)}
           onOpenWord={setEdit}
+          onAdded={
+            page === "phrases"
+              ? (words) => {
+                  if (words[0]) expressionsFor(words[0]);
+                }
+              : undefined
+          }
         />
       )}
       {edit && (

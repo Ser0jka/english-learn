@@ -126,6 +126,30 @@ describe("optional AI API", () => {
     const response = await post("/api/materials/phrases", { word: "book" });
     expect(response.status).toBe(502);
   });
+  it("passes the chosen personal meaning to phrase selection as data", async () => {
+    const mock = mockCompletion({ phrases: [] });
+    const response = await post("/api/materials/phrases", {
+      word: "book",
+      translation: "бронировать",
+    });
+    expect(response.status).toBe(200);
+    const body = JSON.parse(String(mock.mock.calls[0][1]?.body));
+    expect(body.messages[1].content).toContain('"book"');
+    expect(body.messages[1].content).toContain('"бронировать"');
+    expect(body.messages[1].content).toContain("а не другие омонимы");
+    expect(body.messages[1].content).toContain("Не создавай новые идиомы");
+  });
+  it.each([{}, "x".repeat(301), ""])(
+    "rejects invalid phrase meanings before contacting the provider: %j",
+    async (translation) => {
+      const mock = mockCompletion({ phrases: [] });
+      expect(
+        (await post("/api/materials/phrases", { word: "book", translation }))
+          .status,
+      ).toBe(400);
+      expect(mock).not.toHaveBeenCalled();
+    },
+  );
   it("creates an explicitly labelled original reading with supplied vocabulary", async () => {
     const mock = mockCompletion({
       title: "A quiet morning",

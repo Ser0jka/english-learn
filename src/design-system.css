@@ -1040,6 +1040,7 @@ legend {
   color: #ffd1df;
 }
 .toast {
+  animation-name: toast-appear;
   background: #252229f7;
   border-color: #a29477;
   color: var(--text);
@@ -1047,6 +1048,14 @@ legend {
   padding: 12px 14px;
   gap: 12px;
   line-height: 1.7;
+}
+@keyframes toast-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .toast > span:first-child {
   background: #273a2e;
@@ -1286,9 +1295,11 @@ legend {
 .phrase-search {
   background: var(--surface);
   padding: 16px;
+  flex-wrap: wrap;
 }
 .phrase-search .search-field {
   background: var(--bg);
+  min-width: min(100%, 240px);
 }
 .phrase-search > .button {
   font-size: 14px;
@@ -1297,6 +1308,66 @@ legend {
 }
 .phrase-filter-row {
   flex-wrap: wrap;
+}
+.phrase-filter-row .filter-chips {
+  min-width: 0;
+  max-width: 100%;
+}
+.phrase-filter-row .filter-chips button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.phrase-target {
+  overflow-wrap: anywhere;
+  margin: 12px 0 20px;
+}
+.word-picker {
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+.word-picker-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.word-picker-option {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.word-picker-option > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.word-picker-option > span > span {
+  color: var(--muted);
+  font-size: 14px;
+}
+.word-picker-option > svg {
+  flex-shrink: 0;
+  color: var(--gold-bright);
+}
+.word-tile-footer .word-phrase-link {
+  flex-basis: 100%;
+  order: 1;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 2px;
+  color: var(--gold-bright);
 }
 .phrase-filter-row > .text-button {
   font-size: 14px;

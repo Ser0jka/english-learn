@@ -42,12 +42,14 @@ export function AddWords({
   notify,
   onClose,
   onOpenWord,
+  onAdded,
 }: {
   store: StudyProps["store"];
   setStore: StudyProps["setStore"];
   notify: StudyProps["notify"];
   onClose: () => void;
   onOpenWord: (word: Word) => void;
+  onAdded?: (words: Word[]) => void;
 }) {
   const [tab, setTab] = useState<"manual" | "import">("manual");
   const [word, setWord] = useState("");
@@ -98,6 +100,7 @@ export function AddWords({
         : undefined,
     );
     onClose();
+    onAdded?.(prepared);
   }
   async function readFile(file?: File) {
     if (!file) return;

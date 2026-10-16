@@ -1,4 +1,5 @@
 import GeneratedWords from "./GeneratedWords";
+import WordPicker from "./WordPicker";
 import { PHRASE_BANK } from "../phraseBank";
 import { useWordLibrary } from "../useLibrary";
 import LibraryNotice from "./LibraryNotice";
@@ -13,7 +14,6 @@ import {
   RotateCcw,
   Sparkles,
   Search,
-  Shuffle,
   ChevronDown,
   Bookmark,
   BookOpen,
@@ -687,12 +687,15 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
 export function Phrases({
   store,
   setStore,
-  mode,
   notify,
   onHelp,
   onContext,
-}: StudyProps) {
-  const [query, setQuery] = useState("");
+  onAddWords,
+  initialWord,
+}: StudyProps & { initialWord?: Word | null }) {
+  const [query, setQuery] = useState(initialWord?.word || "");
+  const [selectedWord, setSelectedWord] = useState(initialWord || null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const connection = useServiceStatus();
   const { available } = connection;
   const [generating, setGenerating] = useState(false);
@@ -709,27 +712,68 @@ export function Phrases({
     ],
     [store.customPhrases, phraseLibrary.status],
   );
+  const personalWords = useMemo(() => {
+    const seen = new Set<string>();
+    return [...store.words]
+      .sort((a, b) => b.addedAt - a.addedAt)
+      .filter((word) => {
+        const spelling = normalize(word.word);
+        if (seen.has(spelling)) return false;
+        seen.add(spelling);
+        return true;
+      })
+      .slice(0, 6);
+  }, [store.words]);
+  function search(value: string, word: Word | null = null, resetSaved = true) {
+    request.current?.abort();
+    setGenerating(false);
+    setGenerationError("");
+    setQuery(value);
+    setSelectedWord(word);
+    if (resetSaved) setOnlySaved(false);
+    setOpen(null);
+  }
   async function findMore() {
     if (!query.trim() || !available || generating) return;
-    request.current = new AbortController();
+    const controller = new AbortController();
+    request.current = controller;
     setGenerating(true);
     setGenerationError("");
     try {
       const data = await materialRequest<{ phrases: Phrase[] }>(
         "phrases",
-        { word: query.trim() },
-        request.current.signal,
+        {
+          word: query.trim(),
+          ...(selectedWord ? { translation: selectedWord.translation } : {}),
+        },
+        controller.signal,
       );
+      if (controller.signal.aborted) return;
       if (!Array.isArray(data.phrases) || !data.phrases.every(validPhrase))
         throw new Error(
           "Помощник вернул неполный материал. Попробуйте ещё раз.",
         );
       const fresh = data.phrases.filter(
-        (p) => !allPhrases.some((v) => normalize(v.text) === normalize(p.text)),
+        (p) =>
+          !allPhrases.some(
+            (v) =>
+              normalize(v.text) === normalize(p.text) &&
+              normalize(v.translation) === normalize(p.translation),
+          ),
       );
       setStore((s) => ({
         ...s,
-        customPhrases: [...s.customPhrases, ...fresh],
+        customPhrases: [
+          ...s.customPhrases,
+          ...fresh.filter(
+            (p) =>
+              !s.customPhrases.some(
+                (v) =>
+                  normalize(v.text) === normalize(p.text) &&
+                  normalize(v.translation) === normalize(p.translation),
+              ),
+          ),
+        ],
       }));
       setOnlySaved(false);
       notify(
@@ -738,12 +782,12 @@ export function Phrases({
           : "Других выражений пока не нашлось. Попробуйте другое слово.",
       );
     } catch (e) {
-      if (!request.current?.signal.aborted)
+      if (!controller.signal.aborted)
         setGenerationError(
           e instanceof Error ? e.message : "Не удалось получить выражения.",
         );
     } finally {
-      setGenerating(false);
+      if (request.current === controller) setGenerating(false);
     }
   }
 
@@ -817,13 +861,14 @@ export function Phrases({
           <input
             aria-label="Найти выражения по слову"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Введите слово: time, book, heart…"
+            onChange={(e) => search(e.target.value, null, false)}
+            maxLength={100}
+            placeholder="Введите любое английское слово"
           />
           {query && (
             <button
               className="icon-button"
-              onClick={() => setQuery("")}
+              onClick={() => search("", null, false)}
               aria-label="Очистить поиск"
             >
               <X size={16} />
@@ -832,24 +877,21 @@ export function Phrases({
         </div>
         <button
           className="button secondary"
-          onClick={() => {
-            const choices = queueFor(store.words, mode, store.interests).filter(
-              (w) => allPhrases.some((p) => p.keywords.includes(w.word)),
-            );
-            if (!choices.length) {
-              notify(
-                "Для ваших слов пока нет выражений в подборке. Попробуйте поиск по time или book.",
-              );
-              return;
-            }
-            setQuery(choices[Math.floor(Math.random() * choices.length)].word);
-            setOnlySaved(false);
-          }}
+          onClick={() => setPickerOpen(true)}
         >
-          <Shuffle size={17} />
-          Слово из моего списка
+          <BookOpen size={17} />
+          Выбрать своё слово
+        </button>
+        <button className="button secondary" onClick={onAddWords}>
+          <Plus size={17} /> Добавить слово
         </button>
       </div>
+      {selectedWord && (
+        <p className="muted small phrase-target">
+          Выбрано: <strong lang="en">{selectedWord.word}</strong> —{" "}
+          {selectedWord.translation}. Подбор с ИИ учитывает это значение.
+        </p>
+      )}
       {phraseLibrary.status !== "ready" && (
         <LibraryNotice
           status={phraseLibrary.status}
@@ -860,8 +902,8 @@ export function Phrases({
       <div className="assistant-strip">
         <span>
           {available
-            ? "Нужны ещё варианты? Подберите выражения для своего слова."
-            : "Ищите выражения по слову или выберите слово из своего списка."}
+            ? "Поиск показывает готовые выражения. Для новых вариантов со своим словом нажмите «Найти ещё выражения»."
+            : "Ищите готовые выражения по любому слову. Новый подбор с ИИ появится после восстановления помощника."}
         </span>
         <button
           className="text-button gold"
@@ -882,19 +924,33 @@ export function Phrases({
           {generationError}
         </p>
       )}
+      {personalWords.length > 0 && (
+        <p className="muted small">Быстрый выбор из вашего словаря</p>
+      )}
       <div className="phrase-filter-row">
         <div className="filter-chips">
-          {["", "time", "heart", "book", "journey"].map((v) => (
+          <button
+            className={!query && !onlySaved ? "active" : ""}
+            aria-pressed={!query && !onlySaved}
+            onClick={() => search("")}
+          >
+            Все выражения
+          </button>
+          {personalWords.map((word) => (
             <button
-              key={v}
-              className={query === v && !onlySaved ? "active" : ""}
-              aria-pressed={query === v && !onlySaved}
-              onClick={() => {
-                setQuery(v);
-                setOnlySaved(false);
-              }}
+              key={word.id}
+              className={
+                normalize(query) === normalize(word.word) && !onlySaved
+                  ? "active"
+                  : ""
+              }
+              aria-pressed={
+                normalize(query) === normalize(word.word) && !onlySaved
+              }
+              title={word.translation}
+              onClick={() => search(word.word, word)}
             >
-              {v || "Все выражения"}
+              {word.word}
             </button>
           ))}
         </div>
@@ -996,23 +1052,44 @@ export function Phrases({
         <div className="empty-state panel">
           <Search size={28} />
           <h2>
-            {onlySaved ? "Пока без сохранённых выражений" : "Здесь пока тихо"}
+            {onlySaved
+              ? "Пока без сохранённых выражений"
+              : "Готовых выражений пока нет"}
           </h2>
           <p>
             {onlySaved
               ? "Нажмите «Учить» у подходящего выражения — оно появится здесь и в вашем словаре. Если включён поиск, попробуйте очистить его."
-              : "В стартовой подборке нет совпадений. Попробуйте time, heart, book, forest или ice."}
+              : available
+                ? "Для этого слова нет совпадений в готовой подборке. Помощник может подобрать употребляемые выражения и примеры — без выдуманных идиом."
+                : "Для этого слова пока нет совпадений. Сохраните его в словарь и попробуйте подбор, когда помощник снова станет доступен."}
           </p>
-          <button
-            className="button secondary"
-            onClick={() => {
-              setQuery("");
-              setOnlySaved(false);
-            }}
-          >
+          {!onlySaved && available && (
+            <button
+              className="button primary"
+              disabled={generating || !query.trim()}
+              onClick={() => void findMore()}
+            >
+              {generating ? "Подбираем…" : "Подобрать с ИИ"}
+            </button>
+          )}
+          <button className="button secondary" onClick={() => search("")}>
             Показать подборку
           </button>
         </div>
+      )}
+      {pickerOpen && (
+        <WordPicker
+          words={store.words}
+          onClose={() => setPickerOpen(false)}
+          onPick={(word) => {
+            search(word.word, word);
+            setPickerOpen(false);
+          }}
+          onAdd={() => {
+            setPickerOpen(false);
+            onAddWords();
+          }}
+        />
       )}
     </>
   );

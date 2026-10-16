@@ -239,17 +239,22 @@ export function registerAi(app) {
   });
   app.post("/api/materials/phrases", async (req, res) => {
     const word = req.body?.word;
+    const translation = req.body?.translation;
     if (!text(word, 100) || !/[a-z]/i.test(word))
       return res
         .status(400)
         .json({ error: "Введите английское слово до 100 символов." });
+    if (translation !== undefined && !text(translation, 300))
+      return res
+        .status(400)
+        .json({ error: "Перевод должен быть текстом до 300 символов." });
     try {
       const result = await completion(
         [
           { role: "system", content: system },
           {
             role: "user",
-            content: `Подбери до 5 реально употребляемых устойчивых английских выражений со словом ${JSON.stringify(word)}. Не создавай новые идиомы. От более частых к менее частым. Если таких нет, верни пустой массив. Формат JSON: {"phrases":[{"text":"English phrase","translation":"перевод","usage":"как, где и с кем применяют на русском","exceptions":"нюансы или исключения, если есть","example":"свой учебный пример EN, не цитата","exampleRu":"его перевод"}]}. Не пиши историю и не приписывай примеры писателям.`,
+            content: `Подбери до 5 реально употребляемых устойчивых английских выражений и естественных сочетаний со словом ${JSON.stringify(word)}.${translation ? ` Ученик изучает это слово в значении ${JSON.stringify(translation)}. Учитывай именно это значение, а не другие омонимы.` : ""} Не создавай новые идиомы. От более частых к менее частым. Если таких нет, верни пустой массив. Формат JSON: {"phrases":[{"text":"English phrase","translation":"перевод","usage":"как, где и с кем применяют на русском","exceptions":"нюансы или исключения, если есть","example":"свой учебный пример EN, не цитата","exampleRu":"его перевод"}]}. Не пиши историю и не приписывай примеры писателям.`,
           },
         ],
         true,
@@ -266,7 +271,7 @@ export function registerAi(app) {
           id: `ai-${randomUUID()}`,
           text: p.text,
           translation: p.translation,
-          keywords: [word.toLowerCase()],
+          keywords: [word.trim().toLowerCase()],
           frequency: 50 + i,
           frequencyLabel: "Оценка помощника",
           usage: p.usage,
