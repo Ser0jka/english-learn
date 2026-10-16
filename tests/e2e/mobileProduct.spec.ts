@@ -90,6 +90,55 @@ test("phone appearance settings preview all accents accessibly and survive reloa
     feedbackGlow: false,
   });
 });
+test("missing AI setup explains local configuration and can be rechecked without losing the request", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  let configured = false;
+  await page.route("**/api/health", (route) =>
+    route.fulfill({
+      json: { ok: true, aiAvailable: configured, imageAvailable: false },
+    }),
+  );
+  await page.goto("/#words");
+  await page.getByRole("button", { name: "Подобрать слова с ИИ" }).click();
+  const dialog = page.getByRole("dialog");
+  const generate = dialog.getByRole("button", {
+    name: "Создать до 10 карточек",
+  });
+  await expect(generate).toBeDisabled();
+  await expect(dialog.locator(".service-notice")).toContainText(
+    "отсутствует API-ключ",
+  );
+  await dialog.getByText("Как подключить ИИ", { exact: true }).click();
+  await expect(dialog.locator(".service-setup")).toContainText(".env.local");
+  await expect(dialog.locator(".service-setup pre")).toContainText(
+    "https://api.groq.com/openai/v1",
+  );
+  await expect(dialog.locator(".service-setup")).toContainText(
+    "перезапустите сервер",
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const a11y = await new AxeBuilder({ page })
+    .include('[role="dialog"]')
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(a11y.violations.map((v) => v.id)).toEqual([]);
+  await dialog.getByLabel("Какие слова подобрать?").fill("Слова для аэропорта");
+  configured = true;
+  await dialog.getByRole("button", { name: "Проверить подключение" }).click();
+  await expect(generate).toBeEnabled();
+  await expect(dialog.getByLabel("Какие слова подобрать?")).toHaveValue(
+    "Слова для аэропорта",
+  );
+  await expect(dialog.locator(".service-notice")).toContainText(
+    "ИИ настроен на сервере",
+  );
+});
 test("AI vocabulary preview handles failure and saves only selected ready words", async ({
   page,
 }) => {

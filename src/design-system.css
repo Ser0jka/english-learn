@@ -1465,6 +1465,7 @@ legend {
   color: var(--silver);
 }
 .service-notice > svg {
+  flex-shrink: 0;
   color: var(--brass);
   margin-top: 4px;
 }
@@ -1476,6 +1477,26 @@ legend {
   font-size: 13px;
   display: flex;
   color: var(--gold);
+}
+.service-setup {
+  margin-top: 8px;
+}
+.service-setup summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
+  color: var(--gold-bright);
+}
+.service-setup p {
+  margin-block: 8px;
+}
+.service-setup pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 .service-notice[data-status="offline"] {
   border-color: #a98c62;

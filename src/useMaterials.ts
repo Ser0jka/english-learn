@@ -10,6 +10,7 @@ export function useServiceStatus(kind: "text" | "image" = "text") {
   useEffect(() => {
     const c = new AbortController();
     fetch("/api/health", {
+      cache: "no-store",
       signal: AbortSignal.any([c.signal, AbortSignal.timeout(8000)]),
     })
       .then(async (r) => {
