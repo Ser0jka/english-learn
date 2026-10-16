@@ -9,21 +9,32 @@ import ServiceNotice from "./ServiceNotice";
 export function referenceAnswer(
   context: HelpContext,
   question: string,
+  preferAi = false,
 ): string | null {
   const q = question.toLowerCase();
   const { word, phrase } = context;
   if (phrase) {
+    if (
+      preferAi &&
+      phrase.dictionary &&
+      /употреб|примен|исключ|нюанс|огранич|истор|происх|пример|контекст|предложен|когда|где/.test(
+        q,
+      )
+    )
+      return null;
     if (/исключ|нюанс|огранич|путать/.test(q)) return phrase.exceptions;
     if (/истор|происх|появ|возник|откуда/.test(q))
       return `${phrase.origin}\n\nИсточник значения: ${phrase.source.label}. Ссылка доступна в раскрывающейся справке выражения.`;
     if (/пример|контекст|предложен/.test(q))
-      return `${phrase.example}\n${phrase.exampleRu}\n\nЭто учебный пример, не цитата.${phrase.quote ? `\n\nПример из литературы:\n“${phrase.quote.text}”\n${phrase.quote.translation}\n${phrase.quote.author}` : ""}`;
+      return phrase.example
+        ? `${phrase.example}\n${phrase.exampleRu}\n\n${phrase.dictionary ? "Это пример из WordNet." : "Это учебный пример, не цитата."}${phrase.quote ? `\n\nПример из литературы:\n“${phrase.quote.text}”\n${phrase.quote.translation}\n${phrase.quote.author}` : ""}`
+        : null;
     if (
       /знач|перев|употреб|примен|объясн|использ|когда .*говор|где .*говор/.test(
         q,
       )
     )
-      return `${phrase.text} — ${phrase.translation}.\n\n${phrase.usage}\n\n${phrase.exceptions}`;
+      return `${phrase.text} — ${phrase.translation}.\n\n${phrase.usage}${phrase.definition ? `\n\n${phrase.definition}` : ""}\n\n${phrase.exceptions}`;
   }
   if (word) {
     if (/пример|контекст|предложен/.test(q))
@@ -74,7 +85,7 @@ export default function Help({
     setInput("");
     setFailedQuestion("");
     setMessages((m) => [...m, { role: "user", text: question }]);
-    const local = referenceAnswer(context, question);
+    const local = referenceAnswer(context, question, available);
     if (local) {
       setMessages((m) => [...m, { role: "assistant", text: local }]);
       return;

@@ -27,8 +27,13 @@ export interface Word {
   lapses?: number;
   mastery?: "manual" | "scheduled";
   bankId?: string;
+  generated?: boolean;
+  sourcePhraseId?: string;
 }
 export interface Phrase {
+  bankId?: string;
+  dictionary?: boolean;
+  definition?: string;
   generated?: boolean;
   id: string;
   text: string;

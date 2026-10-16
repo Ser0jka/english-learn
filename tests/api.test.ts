@@ -261,3 +261,154 @@ it("rejects a generated translation that cannot be saved as a vocabulary meaning
   );
   expect(mock).toHaveBeenCalledOnce();
 });
+
+describe("Groq and generated vocabulary", () => {
+  it("uses the configured Groq base/model and returns complete cards without invented levels", async () => {
+    vi.stubEnv("LEXI_API_BASE", "https://api.groq.com/openai/v1");
+    vi.stubEnv("LEXI_MODEL", "openai/gpt-oss-120b");
+    const mock = mockCompletion({
+      words: [
+        {
+          word: "adapt",
+          translation: "приспосабливаться",
+          definition: "To change to suit new conditions.",
+          example: "We adapt to the new situation.",
+          exampleRu: "Мы приспосабливаемся к новой ситуации.",
+          partOfSpeech: "verb",
+        },
+      ],
+    });
+    const res = await post("/api/materials/words", {
+      topic: "everyday",
+      request: "Words for daily life",
+      exclude: [],
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.words[0]).toMatchObject({
+      word: "adapt",
+      generated: true,
+      level: "—",
+      status: "learning",
+      successes: 0,
+    });
+    expect(mock.mock.calls[0][0].toString()).toBe(
+      "https://api.groq.com/openai/v1/chat/completions",
+    );
+    expect(JSON.parse(String(mock.mock.calls[0][1]?.body)).model).toBe(
+      "openai/gpt-oss-120b",
+    );
+    expect(
+      JSON.parse(String(mock.mock.calls[0][1]?.body)).messages[1].content,
+    ).toContain("everyday");
+  });
+  it("normalises provider typography in the spelling and context so the answer can be masked", async () => {
+    mockCompletion({
+      words: [
+        {
+          word: "check‑in",
+          translation: "регистрация",
+          definition: "The hotel’s check‑in procedure.",
+          example: "The check‑in is at noon.",
+          exampleRu: "Регистрация в полдень.",
+          partOfSpeech: "noun",
+        },
+      ],
+    });
+    const res = await post("/api/materials/words", {
+      topic: "travel",
+      request: "Hotel words",
+      exclude: [],
+    });
+    expect(res.status).toBe(200);
+    const { words } = await res.json();
+    expect(words[0]).toMatchObject({
+      word: "check-in",
+      definition: "The hotel's check-in procedure.",
+      example: "The check-in is at noon.",
+    });
+    const { maskedContext, maskedDefinition, canPractice } =
+      await import("../src/learning");
+    expect(canPractice(words[0])).toBe(true);
+    expect(maskedContext(words[0])).not.toContain("check-in");
+    expect(maskedDefinition(words[0])).not.toContain("check-in");
+  });
+  it("rejects invalid topics, oversized exclusions and incomplete practice material", async () => {
+    const mock = mockCompletion({
+      words: [
+        {
+          word: "adapt",
+          translation: "перевод",
+          definition: "Definition",
+          example: "The target is missing.",
+          exampleRu: "Пример",
+          partOfSpeech: "verb",
+        },
+      ],
+    });
+    expect(
+      (
+        await post("/api/materials/words", {
+          topic: "invalid",
+          request: "Words",
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await post("/api/materials/words", {
+          topic: "everyday",
+          request: "Words",
+          exclude: Array(101).fill("word"),
+        })
+      ).status,
+    ).toBe(400);
+    expect(mock).not.toHaveBeenCalled();
+    expect(
+      (
+        await post("/api/materials/words", {
+          topic: "everyday",
+          request: "Words",
+        })
+      ).status,
+    ).toBe(502);
+  });
+  it("drops duplicates and does not treat excluded spellings as new words", async () => {
+    mockCompletion({
+      words: ["adapt", "adapt", "learn"].map((word) => ({
+        word,
+        translation: "перевод",
+        definition: "A learning definition.",
+        example: `We ${word} every day.`,
+        exampleRu: "Мы учимся каждый день.",
+        partOfSpeech: "verb",
+      })),
+    });
+    const res = await post("/api/materials/words", {
+      topic: "ideas",
+      request: "Words",
+      exclude: ["learn"],
+    });
+    expect(
+      (await res.json()).words.map((w: { word: string }) => w.word),
+    ).toEqual(["adapt"]);
+  });
+  it("does not offer Groq image generation and requires a separate supported image configuration", async () => {
+    const { imageAvailable } = await import("../ai.mjs");
+    vi.stubEnv("LEXI_API_BASE", "https://api.groq.com/openai/v1");
+    vi.stubEnv("LEXI_IMAGE_API_BASE", "");
+    expect(imageAvailable()).toBe(false);
+    expect(
+      (
+        await post("/api/materials/image", {
+          word: "book",
+          translation: "книга",
+        })
+      ).status,
+    ).toBe(503);
+    vi.stubEnv("LEXI_IMAGE_API_KEY", "separate-test-image-key");
+    expect(imageAvailable()).toBe(false);
+    vi.stubEnv("LEXI_IMAGE_API_BASE", "https://api.example.test/v1");
+    expect(imageAvailable()).toBe(true);
+  });
+});

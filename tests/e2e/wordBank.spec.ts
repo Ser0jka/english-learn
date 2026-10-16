@@ -1,8 +1,18 @@
+import { encodeStoredJson } from "../../src/storageCodec";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { CATALOG } from "../../src/data";
 import { emptyStore } from "../../src/domain";
-import { WORD_BANK } from "../../src/wordBank";
+import { readFileSync } from "node:fs";
+import { registerWordBank, WORD_BANK } from "../../src/wordBank";
+registerWordBank(
+  JSON.parse(
+    readFileSync(
+      new URL("../../src/generated/word-bank.json", import.meta.url),
+      "utf8",
+    ),
+  ),
+);
 const key = "lexi.workspace.v1";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
@@ -75,4 +85,39 @@ test("new dictionary mode is accessible and fits a small phone", async ({
   const source = await page.request.get("/data/word-bank-credits.txt");
   expect(source.ok()).toBe(true);
   expect(await source.text()).toContain("CC BY-SA");
+});
+
+test("all 10,000 dictionary meanings persist in real browser storage with a paged word list", async ({
+  page,
+}) => {
+  const state = { ...emptyStore(), words: WORD_BANK };
+  const raw = encodeStoredJson(JSON.stringify(state));
+  await page.addInitScript(
+    ({ key, raw }) => {
+      if (!sessionStorage.getItem("bulk-seeded")) {
+        localStorage.setItem(key, raw);
+        sessionStorage.setItem("bulk-seeded", "yes");
+      }
+    },
+    { key, raw },
+  );
+  await page.goto("/#words");
+  await expect(
+    page.getByRole("button", { name: "Все · 10000", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".word-tile")).toHaveCount(48);
+  await page.getByRole("button", { name: /Показать ещё слова/ }).click();
+  await expect(page.locator(".word-tile")).toHaveCount(96);
+  const target = WORD_BANK[5000];
+  await page.getByLabel("Поиск слова или перевода").fill(target.word);
+  await expect(
+    page.getByRole("heading", { name: target.word, exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.locator(".storage-warning")).toHaveCount(0);
+  expect(await page.evaluate((k) => localStorage.getItem(k), key)).toBe(raw);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Все · 10000", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate((k) => localStorage.getItem(k), key)).toBe(raw);
 });

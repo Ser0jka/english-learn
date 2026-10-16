@@ -1,3 +1,4 @@
+import compression from "compression";
 import express from "express";
 import { configureHttp, handleHttpError } from "./http.mjs";
 import { createServer } from "node:http";
@@ -10,6 +11,7 @@ const app = express();
 const root = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.argv.includes("--dev");
 configureHttp(app, isDev);
+app.use(compression());
 app.use(express.json({ limit: "24kb" }));
 app.get("/api/health", (_req, res) =>
   res.json({

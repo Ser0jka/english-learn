@@ -2,8 +2,20 @@ import { randomUUID } from "node:crypto";
 
 // Credentials stay on the server. No endpoint accepts a key or a provider URL.
 export const aiAvailable = () => Boolean(process.env.LEXI_API_KEY);
-export const imageAvailable = () =>
-  Boolean(process.env.LEXI_IMAGE_API_KEY || process.env.LEXI_API_KEY);
+export const imageAvailable = () => {
+  // Groq provides text inference here, not the OpenAI image generation API.
+  const groq = /https:\/\/api\.groq\.com(?:\/|$)/i.test(
+    process.env.LEXI_API_BASE || "",
+  );
+  const imageBase =
+    process.env.LEXI_IMAGE_API_BASE ||
+    process.env.LEXI_API_BASE ||
+    "https://api.openai.com/v1";
+  if (/https:\/\/api\.groq\.com(?:\/|$)/i.test(imageBase)) return false;
+  return Boolean(
+    process.env.LEXI_IMAGE_API_KEY || (!groq && process.env.LEXI_API_KEY),
+  );
+};
 /** @param {string} text */
 const phraseSource = (text) => ({
   label: "Найти в Cambridge Dictionary",
@@ -14,6 +26,15 @@ function text(value, max = 2000) {
   return (
     typeof value === "string" && value.trim().length > 0 && value.length <= max
   );
+}
+/** Normalise typographic English punctuation before matching and hiding a target.
+ * @param {string} value */
+function englishText(value) {
+  return value
+    .normalize("NFKC")
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
+    .replace(/[\u2018\u2019\u02bc]/g, "'")
+    .trim();
 }
 /** @param {Array<{role: string, content: string}>} messages @param {boolean} json @returns {Promise<unknown>} */
 async function completion(messages, json = false) {
@@ -117,6 +138,102 @@ export function registerAi(app) {
       res.status(502).json({
         error:
           "Не удалось получить ответ. Попробуйте позже; справка по материалу доступна без подключения.",
+      });
+    }
+  });
+  app.post("/api/materials/words", async (req, res) => {
+    const { topic, request, exclude = [] } = req.body || {};
+    if (
+      !["everyday", "travel", "ideas"].includes(topic) ||
+      !text(request, 200) ||
+      !Array.isArray(exclude) ||
+      exclude.length > 100 ||
+      !exclude.every((w) => text(w, 100))
+    )
+      return res.status(400).json({
+        error: "Укажите тему до 200 символов и корректный список исключений.",
+      });
+    try {
+      const result = await completion(
+        [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: `Подбери до 10 полезных английских слов по запросу пользователя. Не выдумывай слова. У каждого слова одно конкретное значение. Нужны русский перевод, краткое английское определение и естественное английское предложение с точным словом из поля word, затем русский перевод предложения. Части речи: noun, verb, adjective, adverb. Не добавляй транскрипции, CEFR, синонимы или источники. JSON: {"words":[{"word":"English word","translation":"перевод","definition":"definition in English","example":"English sentence with exact word","exampleRu":"перевод предложения","partOfSpeech":"noun"}]}. Категория: ${JSON.stringify(topic)}. Запрос: ${JSON.stringify(request)}. Не повторяй: ${JSON.stringify(exclude)}.`,
+          },
+        ],
+        true,
+      );
+      if (
+        !record(result) ||
+        !Array.isArray(result.words) ||
+        result.words.length < 1 ||
+        result.words.length > 10
+      )
+        throw new Error("Invalid words");
+      const seen = new Set(
+        exclude.map((w) => englishText(w).toLocaleLowerCase("en")),
+      );
+      const words = [];
+      for (const raw of result.words) {
+        const value = record(raw)
+          ? Object.fromEntries(
+              Object.entries(raw).map(([key, value]) => [
+                key,
+                ["word", "definition", "example"].includes(key) &&
+                typeof value === "string"
+                  ? englishText(value)
+                  : value,
+              ]),
+            )
+          : raw;
+        if (
+          !record(value) ||
+          !text(value.word, 100) ||
+          !/^[a-z]+(?:[ '-][a-z]+)*$/i.test(value.word) ||
+          !text(value.translation, 300) ||
+          !text(value.definition, 1500) ||
+          !text(value.example, 1500) ||
+          !text(value.exampleRu, 1500) ||
+          !["noun", "verb", "adjective", "adverb"].some(
+            (pos) => pos === value.partOfSpeech,
+          )
+        )
+          throw new Error("Invalid word");
+        const word = value.word.toLocaleLowerCase("en").trim();
+        if (
+          !new RegExp("(?<![a-z])" + word + "(?![a-z])", "i").test(
+            value.example,
+          )
+        )
+          throw new Error("Missing target in context");
+        if (seen.has(word)) continue;
+        seen.add(word);
+        words.push({
+          id: `ai-${randomUUID()}`,
+          generated: true,
+          word,
+          translation: value.translation,
+          definition: value.definition,
+          example: value.example,
+          exampleRu: value.exampleRu,
+          partOfSpeech: value.partOfSpeech,
+          phonetic: "",
+          synonyms: [],
+          concept: "",
+          level: "—",
+          topic,
+          status: "learning",
+          successes: 0,
+          dueAt: 0,
+          addedAt: Date.now(),
+        });
+      }
+      return res.json({ words });
+    } catch {
+      return res.status(502).json({
+        error:
+          "Не удалось подобрать слова. Проверьте подключение к провайдеру и повторите. Словарная база доступна без ИИ.",
       });
     }
   });

@@ -657,8 +657,14 @@ test("mobile menu hides inactive controls, traps focus and closes with Escape", 
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 760 });
-  await expect(page.getByRole("navigation")).toHaveCount(0);
+  await expect(page.locator(".sidebar").getByRole("navigation")).toHaveCount(0);
+  await expect(
+    page.getByRole("navigation", { name: "Навигация на телефоне" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Открыть меню" }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Навигация на телефоне" }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Закрыть меню" }),
   ).toBeFocused();
@@ -667,6 +673,9 @@ test("mobile menu hides inactive controls, traps focus and closes with Escape", 
   await expect(
     page.getByRole("button", { name: "Открыть меню" }),
   ).toBeFocused();
+  await expect(
+    page.getByRole("navigation", { name: "Навигация на телефоне" }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

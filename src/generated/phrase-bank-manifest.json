@@ -1,0 +1,12 @@
+{
+  "phrases": 5562,
+  "uniquePhrases": 5364,
+  "withEnglishExamples": 522,
+  "sha256": "1e93c19ccc2d55384fcafdab581a00eabfd0ef8b363b6b347072131f04717c36",
+  "partsOfSpeech": {
+    "verb": 836,
+    "adverb": 175,
+    "noun": 4516,
+    "adjective": 35
+  }
+}

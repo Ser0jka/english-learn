@@ -1,3 +1,10 @@
+import { usePwa } from "./usePwa";
+import PwaSettings from "./components/PwaSettings";
+import { DEFAULT_APPEARANCE, applyAppearance } from "./appearance";
+import AppearanceSettings from "./components/AppearanceSettings";
+import GeneratedWords from "./components/GeneratedWords";
+import { useWordLibrary } from "./useLibrary";
+import LibraryNotice from "./components/LibraryNotice";
 import { WORD_BANK_MANIFEST } from "./wordBank";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -105,6 +112,7 @@ function getPage(): Page {
   return NAV.some((n) => n.id === hash) ? (hash as Page) : "home";
 }
 export default function App() {
+  const pwa = usePwa();
   const [initial] = useState(loadStore);
   const [store, setStore] = useState<Store>(initial.state);
   const spellingCounts = useMemo(() => {
@@ -118,7 +126,21 @@ export default function App() {
   const dailyGoal = store.dailyGoal ?? 10;
   const [page, setPage] = useState<Page>(getPage);
   const [mode, setMode] = useState<Mode>("learn");
+  const needsWordBank =
+    mode === "new" ||
+    store.words.some((w) => w.bankId && w.partOfSpeech !== "phrase");
+  const needsPhraseBank = store.words.some(
+    (w) => w.bankId && w.partOfSpeech === "phrase",
+  );
+  const wordLibrary = useWordLibrary("words", needsWordBank);
+  const storedPhraseLibrary = useWordLibrary("phrases", needsPhraseBank);
+  const librariesReady =
+    (!needsWordBank || wordLibrary.status === "ready") &&
+    (!needsPhraseBank || storedPhraseLibrary.status === "ready");
   const [addOpen, setAddOpen] = useState(false);
+  const [generateWords, setGenerateWords] = useState(false);
+  const appearance = store.appearance ?? DEFAULT_APPEARANCE;
+  useEffect(() => applyAppearance(appearance), [appearance]);
   const [edit, setEdit] = useState<Word | null>(null);
   const [help, setHelp] = useState<HelpContext | null>(null);
   const [currentHelp, setCurrentHelp] = useState<HelpContext>({
@@ -169,6 +191,8 @@ export default function App() {
   const [storageError, setStorageError] = useState(initial.error);
   const [query, setQuery] = useState("");
   const [wordFilter, setWordFilter] = useState("all");
+  const [wordLimit, setWordLimit] = useState(48);
+  useEffect(() => setWordLimit(48), [query, wordFilter]);
   const recovery = useRef(false);
   const storageSnapshot = useRef(initial.raw);
   const storageConflict = useRef(false);
@@ -432,6 +456,28 @@ export default function App() {
           </button>
         </div>
       </aside>
+      {!mobile && (
+        <nav className="mobile-bottom-nav" aria-label="Навигация на телефоне">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              aria-label={n.label}
+              aria-current={page === n.id ? "page" : undefined}
+              className={page === n.id ? "active" : ""}
+              onClick={() => go(n.id)}
+            >
+              <n.icon size={22} />
+              <span>
+                {n.id === "phrases"
+                  ? "Выражения"
+                  : n.id === "words"
+                    ? "Словарь"
+                    : n.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+      )}
       <div className="main-shell" inert={mobile}>
         <header className="topbar">
           <div className="topbar-left">
@@ -486,7 +532,7 @@ export default function App() {
             </button>
           </div>
         </header>
-        <main id="main-content" tabIndex={-1}>
+        <main id="main-content" data-page={page} tabIndex={-1}>
           <div className="mode-bar">
             <div className="mode-switch" aria-label="Режим обучения">
               {MODES.map((m) => (
@@ -537,6 +583,13 @@ export default function App() {
             </div>
             {page === "words" ? (
               <div className="row-buttons">
+                <button
+                  className="button secondary"
+                  onClick={() => setGenerateWords(true)}
+                >
+                  <Sparkles size={16} />
+                  Подобрать слова с ИИ
+                </button>
                 <button
                   className="button secondary export-button"
                   onClick={exportWords}
@@ -616,7 +669,24 @@ export default function App() {
               notify={notify}
             />
           )}
-          {page === "cards" && <Flashcards key={mode} {...studyProps} />}
+          {page === "cards" &&
+            ((needsWordBank && wordLibrary.status !== "ready") ||
+            (needsPhraseBank && storedPhraseLibrary.status !== "ready") ? (
+              <LibraryNotice
+                status={
+                  (needsWordBank && wordLibrary.status === "error") ||
+                  (needsPhraseBank && storedPhraseLibrary.status === "error")
+                    ? "error"
+                    : "loading"
+                }
+                onRetry={() => {
+                  wordLibrary.retry();
+                  storedPhraseLibrary.retry();
+                }}
+              />
+            ) : (
+              <Flashcards key={mode} {...studyProps} />
+            ))}
           {page === "phrases" && <Phrases {...studyProps} />}
           {page === "reading" && <Reading key={mode} {...studyProps} />}
           {page === "words" && (
@@ -647,7 +717,8 @@ export default function App() {
                     { id: "learning", label: `Учу · ${learning}` },
                     { id: "learned", label: `Выучил · ${learned}` },
                     { id: "due", label: `Пора повторить · ${stats.due}` },
-                    ...(store.words.some((w) => !canPractice(w))
+                    ...(librariesReady &&
+                    store.words.some((w) => !canPractice(w))
                       ? [
                           {
                             id: "incomplete",
@@ -671,7 +742,7 @@ export default function App() {
                 Найдено слов: {shownWords.length}
               </p>
               <div className="word-grid">
-                {shownWords.map((w) => (
+                {shownWords.slice(0, wordLimit).map((w) => (
                   <article key={w.id} className="word-tile panel">
                     <button
                       className="word-tile-main"
@@ -681,8 +752,17 @@ export default function App() {
                       <div className="word-tile-art">
                         {w.image ? (
                           <img src={w.image} alt={w.word} />
-                        ) : (
+                        ) : w.concept ? (
                           <WordArt concept={w.concept} />
+                        ) : (
+                          <div className="word-tile-placeholder">
+                            <BookOpen size={42} />
+                            <span>
+                              {w.bankId
+                                ? "Словарная карточка"
+                                : "Без иллюстрации"}
+                            </span>
+                          </div>
                         )}
                         <span
                           className={`word-status ${learningState(w, now) === "due" ? "due" : w.status === "learned" ? "known" : "learning"}`}
@@ -717,7 +797,11 @@ export default function App() {
                             ? `/${w.phonetic}/`
                             : w.concept
                               ? "Личная коллекция"
-                              : "Добавьте иллюстрацию"}
+                              : w.bankId
+                                ? "Словарная карточка"
+                                : w.generated
+                                  ? "Материал ИИ"
+                                  : "Добавьте иллюстрацию"}
                         </span>
                       </div>
                     </button>
@@ -769,6 +853,14 @@ export default function App() {
                   </article>
                 ))}
               </div>
+              {shownWords.length > wordLimit && (
+                <button
+                  className="button secondary full"
+                  onClick={() => setWordLimit((n) => n + 48)}
+                >
+                  Показать ещё слова · осталось {shownWords.length - wordLimit}
+                </button>
+              )}
               {!shownWords.length && (
                 <div className="empty-state panel">
                   <Library size={30} />
@@ -851,6 +943,14 @@ export default function App() {
           }}
         />
       )}
+      {generateWords && (
+        <GeneratedWords
+          store={store}
+          setStore={setStore}
+          notify={notify}
+          onClose={() => setGenerateWords(false)}
+        />
+      )}
       {help && <Help context={help} onClose={() => setHelp(null)} />}
       {settings && (
         <Modal
@@ -898,6 +998,11 @@ export default function App() {
                 ),
               )}
             </div>
+            <PwaSettings pwa={pwa} storageError={storageError} />
+            <AppearanceSettings
+              value={appearance}
+              onChange={(appearance) => setStore((s) => ({ ...s, appearance }))}
+            />
             <label>
               Ежедневная цель (разных значений)
               <select

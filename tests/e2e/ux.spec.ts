@@ -251,7 +251,10 @@ test("empty saved expressions and dictionary search explain recovery", async ({
   await page.getByRole("button", { name: "Учу · 0", exact: true }).click();
   await expect(page.locator(".empty-state")).toContainText("Нажмите «Учить»");
   await page.getByRole("button", { name: "Показать подборку" }).click();
-  await expect(page.locator(".phrase-item")).toHaveCount(12);
+  await expect(page.locator(".phrase-item")).toHaveCount(24);
+  await expect(
+    page.getByRole("button", { name: /Показать ещё/ }),
+  ).toBeVisible();
   await page.goto("/#words");
   await page
     .getByRole("textbox", { name: "Поиск слова или перевода" })

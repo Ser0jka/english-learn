@@ -1,3 +1,7 @@
+import GeneratedWords from "./GeneratedWords";
+import { PHRASE_BANK, PHRASE_BANK_MANIFEST } from "../phraseBank";
+import { useWordLibrary } from "../useLibrary";
+import LibraryNotice from "./LibraryNotice";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -71,6 +75,7 @@ export function Flashcards({
   storageError,
   now,
 }: StudyProps) {
+  const [generateOpen, setGenerateOpen] = useState(false);
   const vocabulary = useRef(store.words);
   const [deck, setDeck] = useState(() =>
     studySessionFor(store.words, mode, store.interests, now),
@@ -309,6 +314,14 @@ export function Flashcards({
     );
   return (
     <div className="study-layout">
+      {generateOpen && (
+        <GeneratedWords
+          store={store}
+          setStore={setStore}
+          notify={notify}
+          onClose={() => setGenerateOpen(false)}
+        />
+      )}
       {mode === "new" && (
         <p className="content-note word-bank-notice">
           {WORD_BANK_MANIFEST.cards.toLocaleString("ru-RU")} словарных карточек
@@ -323,6 +336,13 @@ export function Flashcards({
           >
             Источники и ограничения
           </a>
+          <button
+            className="button secondary"
+            onClick={() => setGenerateOpen(true)}
+          >
+            <Sparkles size={16} />
+            Подобрать слова с ИИ
+          </button>
         </p>
       )}
       <div className="flash-panel panel">
@@ -349,7 +369,9 @@ export function Flashcards({
         >
           <span style={{ width: `${(index / deck.length) * 100}%` }} />
         </div>
-        <div className="flash-illustration">
+        <div
+          className={`flash-illustration${word.image || word.concept ? "" : " definition-illustration"}`}
+        >
           {word.image ? (
             <img src={word.image} alt="Иллюстрация к заданию" />
           ) : word.concept ? (
@@ -384,8 +406,7 @@ export function Flashcards({
             Какое слово здесь спрятано?
           </h2>
           <p className="muted">
-            Выберите один подходящий ответ. После ответа покажем все подходящие
-            синонимы и перевод.
+            Выберите слово. Перевод и подходящие синонимы появятся после ответа.
           </p>
           {maskedDefinition(word) && (
             <p className="card-definition" lang="en">
@@ -582,6 +603,7 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
         <div>
           <h4>Когда и как употреблять</h4>
           <p>{phrase.usage}</p>
+          {phrase.definition && <p lang="en">{phrase.definition}</p>}
         </div>
       </div>
       <div className="detail-block">
@@ -602,11 +624,21 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
           <p>{phrase.origin}</p>
         </div>
       </div>
-      <div className="phrase-example">
-        <span className="eyebrow">УЧЕБНЫЙ ПРИМЕР · НЕ ЦИТАТА</span>
-        <p>“{phrase.example}”</p>
-        <span>{phrase.exampleRu}</span>
-      </div>
+      {phrase.example ? (
+        <div className="phrase-example">
+          <span className="eyebrow">
+            {phrase.dictionary
+              ? "СЛОВАРНЫЙ ПРИМЕР · WORDNET"
+              : "УЧЕБНЫЙ ПРИМЕР · НЕ ЦИТАТА"}
+          </span>
+          <p lang="en">“{phrase.example}”</p>
+          {phrase.exampleRu && <span>{phrase.exampleRu}</span>}
+        </div>
+      ) : (
+        <p className="content-note">
+          В исходном словаре нет примера для этого сочетания.
+        </p>
+      )}
       {phrase.quote && (
         <div className="source-quote">
           <span className="eyebrow">ИЗ ЛИТЕРАТУРЫ</span>
@@ -645,7 +677,16 @@ export function Phrases({
   const [generationError, setGenerationError] = useState("");
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
-  const allPhrases = [...PHRASES, ...store.customPhrases];
+  const phraseLibrary = useWordLibrary("phrases");
+  const [visible, setVisible] = useState(24);
+  const allPhrases = useMemo(
+    () => [
+      ...PHRASES,
+      ...(phraseLibrary.status === "ready" ? PHRASE_BANK : []),
+      ...store.customPhrases,
+    ],
+    [store.customPhrases, phraseLibrary.status],
+  );
   async function findMore() {
     if (!query.trim() || !available || generating) return;
     request.current = new AbortController();
@@ -686,6 +727,7 @@ export function Phrases({
 
   const [onlySaved, setOnlySaved] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => setVisible(24), [query, onlySaved]);
   const phrases = allPhrases
     .filter(
       (p) =>
@@ -714,6 +756,7 @@ export function Phrases({
       const word = {
         ...makeWord(p.text, p.translation),
         partOfSpeech: "phrase" as const,
+        sourcePhraseId: p.id,
       };
       // An idiom's meaning is not the literal meaning of a keyword.
       const concept = "";
@@ -731,9 +774,13 @@ export function Phrases({
                 concept,
                 example: p.example,
                 exampleRu: p.exampleRu,
-                definition: p.usage,
+                definition: word.bankId ? word.definition : p.usage,
               },
-            ]).words,
+            ]).words.map((w) =>
+              meaningKey(w) === meaningKey(word)
+                ? { ...w, sourcePhraseId: p.id }
+                : w,
+            ),
       };
     });
     notify(
@@ -781,6 +828,18 @@ export function Phrases({
           Слово из моего списка
         </button>
       </div>
+      <p className="content-note">
+        {PHRASE_BANK_MANIFEST.phrases.toLocaleString("ru-RU")} словарных
+        сочетания и {PHRASES.length} редакционных выражений. В базе есть
+        глагольные выражения и составные названия; это не только идиомы. История
+        и частота не выдумываются.
+      </p>
+      {phraseLibrary.status !== "ready" && (
+        <LibraryNotice
+          status={phraseLibrary.status}
+          onRetry={phraseLibrary.retry}
+        />
+      )}
       <ServiceNotice connection={connection} />
       <div className="assistant-strip">
         <span>
@@ -839,11 +898,11 @@ export function Phrases({
           подборке
         </span>
         <span>
-          По распространённости <Info size={13} />
+          Редакционная подборка, затем словарь <Info size={13} />
         </span>
       </div>
       <div className="phrase-list">
-        {phrases.map((p, i) => (
+        {phrases.slice(0, visible).map((p, i) => (
           <article
             key={p.id}
             className={`phrase-item panel ${open === p.id ? "is-open" : ""}`}
@@ -912,7 +971,15 @@ export function Phrases({
           </article>
         ))}
       </div>
-      {!phrases.length && (
+      {phrases.length > visible && (
+        <button
+          className="button secondary full"
+          onClick={() => setVisible((v) => v + 24)}
+        >
+          Показать ещё · осталось {phrases.length - visible}
+        </button>
+      )}
+      {!phrases.length && phraseLibrary.status === "ready" && (
         <div className="empty-state panel">
           <Search size={28} />
           <h2>
@@ -936,10 +1003,10 @@ export function Phrases({
       )}
       <p className="content-note">
         <Info size={14} />
-        Встроенные выражения — стартовая подборка с источниками. Материалы
-        помощника помечены отдельно и требуют проверки. Частотность
-        приблизительна. Учебные примеры отделены от цитат; переводы выполнены
-        для приложения.
+        Редакционные выражения дополнены базой WordNet/OMW. Словарные сочетания
+        не имеют подтверждённого частотного рейтинга. Материалы помощника
+        помечены отдельно и требуют проверки. Частотность приблизительна.
+        Учебные примеры отделены от цитат; переводы выполнены для приложения.
       </p>
     </>
   );

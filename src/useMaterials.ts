@@ -44,7 +44,7 @@ export function useCapabilities(kind: "text" | "image" = "text") {
   return useServiceStatus(kind).available;
 }
 export async function materialRequest<T>(
-  kind: "phrases" | "reading" | "image",
+  kind: "words" | "phrases" | "reading" | "image",
   body: unknown,
   signal?: AbortSignal,
 ): Promise<T> {

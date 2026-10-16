@@ -1,3 +1,5 @@
+import { encodeStoredJson, decodeStoredJson } from "./storageCodec";
+import { validAppearance, type Appearance } from "./appearance";
 import {
   CATALOG,
   INITIAL_WORDS,
@@ -26,6 +28,7 @@ export interface Store {
   logs: PracticeLog[];
   interests: Topic[];
   dailyGoal?: number;
+  appearance?: Appearance;
 }
 export const STORAGE_KEY = "lexi.workspace.v1";
 export const emptyStore = (): Store => ({
@@ -94,6 +97,9 @@ export function validWord(value: unknown): value is Word {
     (value.bankId === undefined ||
       (typeof value.bankId === "string" &&
         /^\d{8}-[nvar]$/.test(value.bankId))) &&
+    (value.generated === undefined || typeof value.generated === "boolean") &&
+    (value.sourcePhraseId === undefined ||
+      shortText(value.sourcePhraseId, 200)) &&
     shortText(value.id, 200) &&
     shortText(value.word, 100) &&
     /[a-z]/i.test(value.word) &&
@@ -134,6 +140,7 @@ export function validateStore(value: unknown): Store {
   if (
     !isRecord(value) ||
     value.version !== 1 ||
+    (value.appearance !== undefined && !validAppearance(value.appearance)) ||
     !Array.isArray(value.words) ||
     value.words.length > 20000 ||
     !value.words.every(validWord) ||
@@ -171,7 +178,9 @@ export function validateStore(value: unknown): Store {
   if (
     !Array.isArray(customPhrases) ||
     !customPhrases.every(validPhrase) ||
-    customPhrases.some((p) => PHRASES.some((b) => b.id === p.id)) ||
+    customPhrases.some(
+      (p) => p.id.startsWith("wnphrase-") || PHRASES.some((b) => b.id === p.id),
+    ) ||
     !Array.isArray(customPassages) ||
     !customPassages.every(validPassage) ||
     customPassages.some((p) => PASSAGES.some((b) => b.id === p.id)) ||
@@ -190,6 +199,9 @@ export function validateStore(value: unknown): Store {
     interests: [...new Set(value.interests as Topic[])],
     customPhrases,
     customPassages,
+    ...(value.appearance === undefined
+      ? {}
+      : { appearance: value.appearance as Appearance }),
     ...(value.dailyGoal === undefined
       ? {}
       : { dailyGoal: value.dailyGoal as number }),
@@ -204,7 +216,9 @@ export function loadStore(): {
   try {
     raw = localStorage.getItem(STORAGE_KEY);
     return {
-      state: raw ? validateStore(JSON.parse(raw)) : emptyStore(),
+      state: raw
+        ? validateStore(JSON.parse(decodeStoredJson(raw)))
+        : emptyStore(),
       error: "",
       raw,
     };
@@ -232,7 +246,7 @@ export function saveStore(state: Store, expectedRaw?: string | null): string {
     localStorage.getItem(STORAGE_KEY) !== expectedRaw
   )
     throw new StorageConflictError();
-  const raw = JSON.stringify(state);
+  const raw = encodeStoredJson(JSON.stringify(state));
   localStorage.setItem(STORAGE_KEY, raw);
   return raw;
 }
@@ -272,7 +286,9 @@ export function removeWord(state: Store, id: string): Store {
   return {
     ...state,
     words: state.words.filter((w) => w.id !== id),
-    phraseIds: state.phraseIds.filter((p) => !associated.has(p)),
+    phraseIds: state.phraseIds.filter(
+      (p) => p !== word.sourcePhraseId && !associated.has(p),
+    ),
   };
 }
 export function mergeWords(existing: Word[], incoming: Word[]) {
@@ -524,15 +540,14 @@ export function validPhrase(p: unknown): p is Phrase {
   return (
     shortText(p.id, 200) &&
     shortText(p.text, 100) &&
-    [
-      "translation",
-      "usage",
-      "exceptions",
-      "origin",
-      "example",
-      "exampleRu",
-      "frequencyLabel",
-    ].every((k) => shortText(p[k], 4000)) &&
+    ["translation", "usage", "exceptions", "origin", "frequencyLabel"].every(
+      (k) => shortText(p[k], 4000),
+    ) &&
+    ["example", "exampleRu"].every((k) => shortText(p[k], 4000, true)) &&
+    (p.definition === undefined || shortText(p.definition, 4000)) &&
+    (p.dictionary === undefined || typeof p.dictionary === "boolean") &&
+    (p.bankId === undefined ||
+      (typeof p.bankId === "string" && /^\d{8}-[nvar]$/.test(p.bankId))) &&
     Array.isArray(p.keywords) &&
     p.keywords.every((k) => shortText(k, 100)) &&
     typeof p.frequency === "number" &&

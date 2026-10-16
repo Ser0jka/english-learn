@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
+  registerWordBank,
   WORD_BANK,
   WORD_BANK_MANIFEST,
   NEW_SESSION_SIZE,
@@ -26,6 +27,16 @@ import {
   parseBackup,
   makeWord,
 } from "../src/domain";
+beforeAll(() =>
+  registerWordBank(
+    JSON.parse(
+      readFileSync(
+        new URL("../src/generated/word-bank.json", import.meta.url),
+        "utf8",
+      ),
+    ),
+  ),
+);
 describe("10,000 dictionary cards", () => {
   it("has exactly 10,000 distinct, valid meanings with an intact pinned artifact", () => {
     expect(WORD_BANK).toHaveLength(10000);

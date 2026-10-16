@@ -168,6 +168,7 @@ export function partOfSpeechFor(word: Word): PartOfSpeech {
   );
 }
 export function canPractice(word: Word) {
+  if (word.bankId && !WORD_BANK.length && !bankEntry(word)) return false;
   const cached = readiness.get(word);
   if (cached !== undefined) return cached;
   const result =
