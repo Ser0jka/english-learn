@@ -1,3 +1,4 @@
+/* eslint jsx-a11y/no-noninteractive-tabindex: ["error", { "roles": ["tabpanel", "log"] }] -- A scrollable conversation log needs keyboard access. */
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Sparkles, BookOpen, ArrowUpRight } from "lucide-react";
 import type { HelpContext } from "../types";
@@ -184,6 +185,7 @@ export default function Help({
   return (
     <Modal
       title="Разберёмся вместе"
+      className="modal-chat"
       subtitle={
         available
           ? "Справка по материалу и помощник по английскому"
@@ -203,6 +205,7 @@ export default function Help({
         className="chat-messages"
         ref={scroll}
         role="log"
+        tabIndex={0}
         aria-label="Переписка с помощником"
         aria-live="polite"
         aria-relevant="additions text"

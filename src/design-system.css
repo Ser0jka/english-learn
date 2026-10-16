@@ -3458,3 +3458,267 @@ legend {
 .source-quote a:hover {
   color: var(--gold-bright);
 }
+
+/* Mobile audit: controls must fit their container, not merely the page width. */
+.sidebar {
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+.sidebar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+}
+.word-actions {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.compact-action-label {
+  display: none;
+}
+.page-heading h1:focus {
+  outline: none;
+}
+
+/* Keep a close control available while the form itself scrolls. */
+.modal-backdrop {
+  top: var(--dialog-viewport-top, 0px);
+  bottom: auto;
+  height: var(--dialog-viewport-height, 100dvh);
+}
+.modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--dialog-viewport-height, 100dvh) - 60px);
+  overflow: hidden;
+}
+.modal-header {
+  flex-shrink: 0;
+}
+.modal-header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.modal-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .sidebar-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--surface);
+  }
+  .sidebar-header .brand {
+    margin: 0 0 24px;
+  }
+  .sidebar-header .mobile-close {
+    position: static;
+    flex: 0 0 44px;
+    margin: 0;
+  }
+  .modal {
+    max-height: calc(
+      var(--dialog-viewport-height, 100dvh) - 24px - env(safe-area-inset-top) -
+        env(safe-area-inset-bottom)
+    );
+  }
+}
+@media (max-width: 1000px) {
+  .modal-backdrop {
+    padding: max(12px, env(safe-area-inset-top)) 12px
+      max(12px, env(safe-area-inset-bottom));
+  }
+  .modal-chat {
+    height: calc(
+      var(--dialog-viewport-height, 100dvh) - 24px - env(safe-area-inset-top) -
+        env(safe-area-inset-bottom)
+    );
+  }
+  .modal-chat .modal-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  .modal-chat .modal-content > * {
+    flex-shrink: 0;
+  }
+  .modal-chat .chat-messages {
+    flex: 1 1 auto;
+    min-height: 60px;
+    max-height: none;
+    padding: 16px 18px;
+    scroll-behavior: auto;
+    overscroll-behavior: contain;
+  }
+  .modal-chat .chat-message {
+    flex-shrink: 0;
+  }
+  .modal-chat .quick-questions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 8px 18px 0;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+  .modal-chat .quick-questions button {
+    flex-shrink: 0;
+  }
+  .modal-chat .help-material {
+    margin: 12px 18px 0;
+  }
+  .modal-chat .assistant-availability {
+    margin: 10px 18px 0;
+  }
+  .modal-chat .assistant-availability:empty {
+    display: none;
+  }
+  .modal-chat .chat-form {
+    margin: 12px 18px 16px;
+  }
+  .modal-chat .chat-form input {
+    min-width: 0;
+    flex: 1;
+  }
+}
+@media (max-width: 540px) {
+  .word-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+  .word-actions .button {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+  }
+  .word-actions .button.primary {
+    grid-column: 1 / -1;
+  }
+  .word-actions .wide-action-label {
+    display: none;
+  }
+  .word-actions .compact-action-label {
+    display: inline;
+  }
+  .modal-header h2 {
+    font-size: 22px;
+    line-height: 1.3;
+  }
+}
+@media (max-width: 1000px) {
+  /* visualViewport can shrink for a keyboard without changing media queries. */
+  .modal-backdrop[data-compact="true"] .modal {
+    max-height: calc(var(--dialog-viewport-height, 100dvh) - 24px);
+  }
+  .modal-backdrop[data-compact="true"] .modal-header {
+    padding: 12px 18px;
+    gap: 10px;
+  }
+  .modal-backdrop[data-compact="true"] .modal-header h2 {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  .modal-backdrop[data-compact="true"] .modal-header p {
+    display: none;
+  }
+  .modal-backdrop[data-compact="true"] .modal-chat .help-material,
+  .modal-backdrop[data-compact="true"] .modal-chat .quick-questions {
+    display: none;
+  }
+  .modal-backdrop[data-compact="true"] .modal-chat .assistant-availability {
+    margin-top: 8px;
+  }
+  .modal-backdrop[data-compact="true"] .modal-chat .service-notice {
+    padding: 8px 10px;
+  }
+  .modal-backdrop[data-compact="true"] .modal-chat .chat-messages {
+    min-height: 40px;
+    padding-block: 10px;
+  }
+  .modal-backdrop[data-compact="true"] .modal-chat .chat-form {
+    margin-block: 8px 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    height: 56px;
+    min-height: 56px;
+    padding-block: 6px;
+  }
+  main {
+    padding-top: 16px;
+  }
+  .mode-bar {
+    margin-bottom: 18px;
+  }
+  .page-heading {
+    margin-bottom: 20px;
+  }
+  .page-heading > div > .eyebrow {
+    display: none;
+  }
+  .page-heading h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    line-height: 1.3;
+  }
+  .page-heading p,
+  .welcome-content p,
+  .service-notice {
+    font-size: var(--font-small);
+    line-height: 1.65;
+  }
+  .flash-illustration {
+    height: 120px;
+  }
+  .flash-content > .muted {
+    display: none;
+  }
+}
+@media (max-width: 420px) {
+  .mode-switch button {
+    min-height: 58px;
+    padding-block: 6px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .modal-header h2,
+  .modal-header p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+  .modal-backdrop[data-compact="true"] .modal-header h2 {
+    -webkit-line-clamp: 2;
+  }
+  .modal-backdrop[data-compact="true"] .modal-header p {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .answer-feedback {
+    scroll-margin-block: 16px calc(90px + env(safe-area-inset-bottom));
+  }
+}

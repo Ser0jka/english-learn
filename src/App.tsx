@@ -353,27 +353,29 @@ export default function App() {
         />
       )}
       <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
-        <a
-          href="#home"
-          className="brand"
-          aria-label="Lexi — на главную"
-          onClick={() => go("home")}
-        >
-          <span className="brand-icon">
-            <Sparkles size={24} strokeWidth={1.25} />
-          </span>
-          <span>
-            lexi<span className="brand-period">.</span>
-          </span>
-          <span className="brand-caption">СЛОВА СО СМЫСЛОМ</span>
-        </a>
-        <button
-          className="mobile-close icon-button"
-          onClick={() => setMobile(false)}
-          aria-label="Закрыть меню"
-        >
-          <X size={21} />
-        </button>
+        <div className="sidebar-header">
+          <a
+            href="#home"
+            className="brand"
+            aria-label="Lexi — на главную"
+            onClick={() => go("home")}
+          >
+            <span className="brand-icon">
+              <Sparkles size={24} strokeWidth={1.25} />
+            </span>
+            <span>
+              lexi<span className="brand-period">.</span>
+            </span>
+            <span className="brand-caption">СЛОВА СО СМЫСЛОМ</span>
+          </a>
+          <button
+            className="mobile-close icon-button"
+            onClick={() => setMobile(false)}
+            aria-label="Закрыть меню"
+          >
+            <X size={21} />
+          </button>
+        </div>
         <div className="workspace-label">ВАШЕ ПРОСТРАНСТВО</div>
         <nav aria-label="Основная навигация">
           {NAV.map((n) => (
@@ -581,13 +583,19 @@ export default function App() {
               <p>{PAGE_COPY[page][1]}</p>
             </div>
             {page === "words" ? (
-              <div className="row-buttons">
+              <div className="row-buttons word-actions">
                 <button
                   className="button secondary"
+                  aria-label="Подобрать слова с ИИ"
                   onClick={() => setGenerateWords(true)}
                 >
                   <Sparkles size={16} />
-                  Подобрать слова с ИИ
+                  <span className="wide-action-label">
+                    Подобрать слова с ИИ
+                  </span>
+                  <span className="compact-action-label" aria-hidden="true">
+                    Слова с ИИ
+                  </span>
                 </button>
                 <button
                   className="button secondary export-button"
@@ -620,9 +628,9 @@ export default function App() {
               <div className="welcome-content">
                 <h2>Ваш английский начинается здесь</h2>
                 <p>
-                  Мы добавили 12 учебных примеров, чтобы вы могли попробовать
-                  все режимы. Стартовые пометки «Учу» и «Выучил» можно изменить.
-                  Ваши ответы и прогресс сохраняются только в этом браузере.
+                  Для старта — 12 учебных примеров. Добавляйте свои слова и
+                  меняйте пометки «Учу» / «Выучил». Прогресс сохраняется в этом
+                  браузере.
                 </p>
                 <div className="row-buttons">
                   <button

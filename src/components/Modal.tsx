@@ -7,17 +7,51 @@ export default function Modal({
   children,
   onClose,
   wide = false,
+  className = "",
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
   const close = useRef(onClose);
+  const backdrop = useRef<HTMLDivElement>(null);
   close.current = onClose;
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const height = viewport?.height ?? window.innerHeight;
+        // Follow the visible viewport when the on-screen keyboard covers the layout viewport.
+        backdrop.current?.style.setProperty(
+          "--dialog-viewport-height",
+          `${height}px`,
+        );
+        backdrop.current?.style.setProperty(
+          "--dialog-viewport-top",
+          `${viewport?.offsetTop ?? 0}px`,
+        );
+        if (backdrop.current)
+          backdrop.current.dataset.compact = String(height <= 500);
+      });
+    };
+    update();
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
   useEffect(() => {
     const before = document.activeElement as HTMLElement;
     const root = document.getElementById("root");
@@ -69,13 +103,14 @@ export default function Modal({
   return createPortal(
     <div
       className="modal-backdrop"
+      ref={backdrop}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className={`modal ${wide ? "modal-wide" : ""}`}
+        className={`modal ${wide ? "modal-wide" : ""} ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={id}
@@ -94,7 +129,7 @@ export default function Modal({
             <X size={20} />
           </button>
         </header>
-        {children}
+        <div className="modal-content">{children}</div>
       </div>
     </div>,
     document.body,

@@ -1,0 +1,926 @@
+[
+  {
+    "name": "320-568-home",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-cards",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-words",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-phrases",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-reading",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-add",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-import",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-menu",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-settings",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-settings-large",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-home-large",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-cards-large",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-words-large",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-phrases-large",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-reading-large",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-help",
+    "viewport": [320, 568],
+    "pageWidth": 320,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "320-568-runtime",
+    "errors": []
+  },
+  {
+    "name": "360-640-home",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-cards",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-words",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-phrases",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-reading",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-add",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-import",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-menu",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-settings",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-settings-large",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-home-large",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-cards-large",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-words-large",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-phrases-large",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-reading-large",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-help",
+    "viewport": [360, 640],
+    "pageWidth": 360,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "360-640-runtime",
+    "errors": []
+  },
+  {
+    "name": "390-844-home",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-cards",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-words",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-phrases",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-reading",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-add",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-import",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-menu",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-settings",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-settings-large",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-home-large",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-cards-large",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-words-large",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-phrases-large",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-reading-large",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-help",
+    "viewport": [390, 844],
+    "pageWidth": 390,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "390-844-runtime",
+    "errors": []
+  },
+  {
+    "name": "430-932-home",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-cards",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-words",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-phrases",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-reading",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-add",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-import",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-menu",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-settings",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-settings-large",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-home-large",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-cards-large",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-words-large",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-phrases-large",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-reading-large",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-help",
+    "viewport": [430, 932],
+    "pageWidth": 430,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "430-932-runtime",
+    "errors": []
+  },
+  {
+    "name": "667-375-home",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-cards",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-words",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-phrases",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-reading",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-add",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-import",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-menu",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-settings",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-settings-large",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-home-large",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-cards-large",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-words-large",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-phrases-large",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-reading-large",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-help",
+    "viewport": [667, 375],
+    "pageWidth": 667,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "667-375-runtime",
+    "errors": []
+  },
+  {
+    "name": "844-390-home",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-cards",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-words",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-phrases",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-reading",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-add",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-import",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-menu",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-settings",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-settings-large",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-home-large",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-cards-large",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-words-large",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-phrases-large",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-reading-large",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-help",
+    "viewport": [844, 390],
+    "pageWidth": 844,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "844-390-runtime",
+    "errors": []
+  },
+  {
+    "name": "768-1024-home",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-cards",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-words",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-phrases",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-reading",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-add",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-import",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-menu",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-settings",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-settings-large",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-home-large",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-cards-large",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-words-large",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-phrases-large",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-reading-large",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-help",
+    "viewport": [768, 1024],
+    "pageWidth": 768,
+    "outside": [],
+    "small": [],
+    "clipped": []
+  },
+  {
+    "name": "768-1024-runtime",
+    "errors": []
+  }
+]

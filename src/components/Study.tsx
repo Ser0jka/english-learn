@@ -86,7 +86,16 @@ export function Flashcards({
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
   const question = useRef<HTMLHeadingElement>(null);
+  const feedback = useRef<HTMLDivElement>(null);
   const word = deck[index];
+  useEffect(() => {
+    if (answer === null || !window.matchMedia("(max-width: 760px)").matches)
+      return;
+    const frame = requestAnimationFrame(() => {
+      feedback.current?.scrollIntoView({ block: "nearest", behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [answer]);
   useEffect(() => {
     if (index > 0) question.current?.focus();
   }, [index]);
@@ -443,6 +452,7 @@ export function Flashcards({
           {answer !== null ? (
             <div
               className={`answer-feedback ${isCorrect ? "success" : "error"}`}
+              ref={feedback}
               role="status"
             >
               <div className="feedback-title">
