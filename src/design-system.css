@@ -1,6 +1,10 @@
 /* Canonical visual tokens. Layout lives in styles.css; all UI colour and control
    states are defined here. Green and raspberry are reserved for feedback. */
 :root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
   color-scheme: dark;
   font-size: 16px;
   --bg: #09090c;
@@ -3292,7 +3296,7 @@ legend {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     background: var(--bg);
     border-top: 1px solid var(--border);
-    padding: 6px 6px max(6px, env(safe-area-inset-bottom));
+    padding: 6px 6px max(6px, var(--safe-area-bottom));
     gap: 2px;
   }
   .mobile-bottom-nav button {
@@ -3318,7 +3322,7 @@ legend {
     flex-shrink: 0;
   }
   .main-shell > main {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    padding-bottom: calc(100px + var(--safe-area-bottom));
   }
   main[data-page="cards"] .page-heading {
     margin-bottom: 12px;
@@ -3377,22 +3381,22 @@ legend {
     font-size: 16px;
   }
   .toast {
-    bottom: calc(88px + env(safe-area-inset-bottom));
+    bottom: calc(88px + var(--safe-area-bottom));
   }
   .reading-definition {
-    bottom: calc(86px + env(safe-area-inset-bottom));
+    bottom: calc(86px + var(--safe-area-bottom));
   }
   body:has(input:focus, textarea:focus, select:focus) .mobile-bottom-nav {
     display: none;
   }
   .modal {
     max-height: calc(
-      100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      100dvh - 24px - var(--safe-area-top) - var(--safe-area-bottom)
     );
   }
   .modal-backdrop {
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-top: max(12px, var(--safe-area-top));
+    padding-bottom: max(12px, var(--safe-area-bottom));
   }
 }
 @media (min-width: 380px) and (max-width: 760px) {
@@ -3515,8 +3519,8 @@ legend {
 
 @media (max-width: 760px) {
   .sidebar {
-    padding-top: max(16px, env(safe-area-inset-top));
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-top: max(16px, var(--safe-area-top));
+    padding-bottom: max(12px, var(--safe-area-bottom));
   }
   .sidebar-header {
     position: sticky;
@@ -3534,20 +3538,20 @@ legend {
   }
   .modal {
     max-height: calc(
-      var(--dialog-viewport-height, 100dvh) - 24px - env(safe-area-inset-top) -
-        env(safe-area-inset-bottom)
+      var(--dialog-viewport-height, 100dvh) - 24px - var(--safe-area-top) -
+        var(--safe-area-bottom)
     );
   }
 }
 @media (max-width: 1000px) {
   .modal-backdrop {
-    padding: max(12px, env(safe-area-inset-top)) 12px
-      max(12px, env(safe-area-inset-bottom));
+    padding: max(12px, var(--safe-area-top)) 12px
+      max(12px, var(--safe-area-bottom));
   }
   .modal-chat {
     height: calc(
-      var(--dialog-viewport-height, 100dvh) - 24px - env(safe-area-inset-top) -
-        env(safe-area-inset-bottom)
+      var(--dialog-viewport-height, 100dvh) - 24px - var(--safe-area-top) -
+        var(--safe-area-bottom)
     );
   }
   .modal-chat .modal-content {
@@ -3719,6 +3723,59 @@ legend {
 
 @media (max-width: 760px) {
   .answer-feedback {
-    scroll-margin-block: 16px calc(90px + env(safe-area-inset-bottom));
+    scroll-margin-block: 16px calc(90px + var(--safe-area-bottom));
+  }
+}
+
+/* In an iOS standalone app the status bar overlays the layout viewport. */
+.main-shell {
+  padding-top: var(--safe-area-top);
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--safe-area-top);
+  background: var(--bg);
+  pointer-events: none;
+  z-index: 90;
+}
+.sidebar {
+  --sidebar-edge: 21px;
+  padding-top: calc(35px + var(--safe-area-top));
+  padding-left: calc(var(--sidebar-edge) + var(--safe-area-left));
+  padding-right: var(--sidebar-edge);
+}
+@media (max-width: 1200px) {
+  .sidebar {
+    --sidebar-edge: 15px;
+  }
+}
+@media (max-width: 1000px) {
+  .sidebar {
+    --sidebar-edge: 11px;
+  }
+  .modal-backdrop {
+    padding-left: max(12px, var(--safe-area-left));
+    padding-right: max(12px, var(--safe-area-right));
+  }
+}
+@media (max-width: 760px) {
+  .sidebar {
+    --sidebar-edge: 21px;
+    padding-top: calc(16px + var(--safe-area-top));
+  }
+  .sidebar-header {
+    top: var(--safe-area-top);
+  }
+  .mobile-bottom-nav {
+    padding-left: calc(6px + var(--safe-area-left));
+    padding-right: calc(6px + var(--safe-area-right));
+  }
+  .reading-definition {
+    left: calc(12px + var(--safe-area-left));
+    right: calc(12px + var(--safe-area-right));
   }
 }
