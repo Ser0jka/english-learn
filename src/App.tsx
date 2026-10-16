@@ -1426,7 +1426,7 @@ function Home({
             <p className="discovery-example">“{discovery.example}”</p>
           )}
           <button
-            className="discovery-button"
+            className="button primary full discovery-button"
             onClick={() => {
               if (existing) {
                 onEdit(existing);

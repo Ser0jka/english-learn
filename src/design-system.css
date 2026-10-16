@@ -656,15 +656,7 @@ legend {
   color: #d5c6ad;
 }
 .discovery-button {
-  font-size: 14px;
-  color: var(--gold-bright);
-  border-color: #786342;
-  padding-top: 15px;
-  line-height: 1.6;
   min-height: 48px;
-}
-.discovery-button:hover {
-  color: #ffe3ba;
 }
 .welcome-card {
   display: flex;

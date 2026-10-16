@@ -1200,22 +1200,7 @@ main {
   max-width: 230px;
 }
 .discovery-button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-  font-size: var(--font-caption);
-  color: #cdb781;
   margin-top: 18px;
-  padding: 12px 0 0;
-  border-top: 1px solid #453e2b;
-  text-align: left;
-}
-.discovery-button > svg:last-child {
-  margin-left: auto;
-}
-.discovery-button:hover {
-  color: #f0dcae;
 }
 .main-footer {
   max-width: 1390px;
@@ -3217,9 +3202,6 @@ main {
   .discovery-card .discovery-example {
     font-size: var(--font-caption);
   }
-  .discovery-button {
-    font-size: var(--font-caption);
-  }
   .study-layout,
   .reading-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -3990,8 +3972,6 @@ main {
     margin-top: 14px;
   }
   .discovery-button {
-    font-size: var(--font-caption);
-    padding-top: 15px;
     margin-top: 19px;
   }
   .main-footer {
