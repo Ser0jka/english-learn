@@ -1,3 +1,4 @@
+import { useBottomNavigation } from "./useBottomNavigation";
 import { usePwa } from "./usePwa";
 import PwaSettings from "./components/PwaSettings";
 import { DEFAULT_APPEARANCE, applyAppearance } from "./appearance";
@@ -156,6 +157,7 @@ export default function App() {
   }, [page, store.words]);
   const [settings, setSettings] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const bottomNavigation = useBottomNavigation(mobile);
   const [toast, setToast] = useState("");
   const [toastAction, setToastAction] = useState<NoticeAction | null>(null);
   const [welcome, setWelcome] = useState(() => {
@@ -331,7 +333,7 @@ export default function App() {
     onModeChange: setMode,
     storageError,
   };
-  return (
+  const shell = (
     <div className="app-shell">
       <a
         className="skip-link"
@@ -457,28 +459,6 @@ export default function App() {
           </button>
         </div>
       </aside>
-      {!mobile && (
-        <nav className="mobile-bottom-nav" aria-label="Навигация на телефоне">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              aria-label={n.label}
-              aria-current={page === n.id ? "page" : undefined}
-              className={page === n.id ? "active" : ""}
-              onClick={() => go(n.id)}
-            >
-              <n.icon size={22} />
-              <span>
-                {n.id === "phrases"
-                  ? "Выражения"
-                  : n.id === "words"
-                    ? "Словарь"
-                    : n.label}
-              </span>
-            </button>
-          ))}
-        </nav>
-      )}
       <div className="main-shell" inert={mobile}>
         <header className="topbar">
           <div className="topbar-left">
@@ -1011,7 +991,10 @@ export default function App() {
               <select
                 value={dailyGoal}
                 onChange={(e) =>
-                  setStore((s) => ({ ...s, dailyGoal: Number(e.target.value) }))
+                  setStore((s) => ({
+                    ...s,
+                    dailyGoal: Number(e.target.value),
+                  }))
                 }
               >
                 {[
@@ -1100,6 +1083,37 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+  return (
+    <>
+      {shell}
+      {!mobile && (
+        <nav
+          ref={bottomNavigation}
+          className="mobile-bottom-nav"
+          aria-label="Навигация на телефоне"
+        >
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              aria-label={n.label}
+              aria-current={page === n.id ? "page" : undefined}
+              className={page === n.id ? "active" : ""}
+              onClick={() => go(n.id)}
+            >
+              <n.icon size={22} />
+              <span>
+                {n.id === "phrases"
+                  ? "Выражения"
+                  : n.id === "words"
+                    ? "Словарь"
+                    : n.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+      )}
+    </>
   );
 }
 function Home({

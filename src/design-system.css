@@ -3771,3 +3771,10 @@ body::before {
     right: calc(12px + var(--safe-area-right));
   }
 }
+
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    transform: translate3d(0, var(--bottom-nav-correction, 0px), 0);
+    isolation: isolate;
+  }
+}
