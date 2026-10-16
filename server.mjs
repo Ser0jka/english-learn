@@ -47,7 +47,8 @@ if (isDev) {
 }
 app.use(handleHttpError);
 const port = Number(process.env.PORT || 5173);
-server.listen(port, "0.0.0.0", () =>
+const host = process.env.LEXI_HOST || "0.0.0.0";
+server.listen(port, host, () =>
   console.log(
     `Lexi listening on port ${port} (${isDev ? "development" : "production"})`,
   ),
