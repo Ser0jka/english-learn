@@ -1,0 +1,25 @@
+{
+  "cards": 10000,
+  "uniqueHeadwords": 7637,
+  "sha256": "0d2b9958622561474f626f8bcceddf2bbd67eb7ca8a966af68365ab7d3c8098c",
+  "sources": {
+    "wordnet.zip": [
+      "https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/corpora/wordnet.zip",
+      "cbda5ea6eef7f36a97a43d4a75f85e07fccbb4f23657d27b4ccbc93e2646ab59"
+    ],
+    "russian.tab": [
+      "https://raw.githubusercontent.com/omwn/omw-data/406bf83b3c507a3d1f26e88252d5d66893fd36bf/wns/wikt/wn-wikt-rus.tab",
+      "bdb2f68c2ba46ca89e131b6b3c5bd14fdbb2c2f00a9dc7cb1dd24e00f08c6751"
+    ],
+    "frequency.txt": [
+      "https://raw.githubusercontent.com/hermitdave/FrequencyWords/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/en/en_50k.txt",
+      "5351ff405b1126ef555791dd4d9798a48e3e9a501a9fc481a9da957752cfb458"
+    ]
+  },
+  "partsOfSpeech": {
+    "verb": 1476,
+    "noun": 6905,
+    "adverb": 222,
+    "adjective": 1397
+  }
+}

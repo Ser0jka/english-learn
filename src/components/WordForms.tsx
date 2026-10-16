@@ -741,6 +741,7 @@ export function WordEditor({
                   mastery: undefined,
                   lapses: 0,
                   dueAt: 0,
+                  bankId: undefined,
                 });
                 // Never silently transfer a different meaning's material to the edited entry.
                 if (edit.image === word.image) next.image = undefined;

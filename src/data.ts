@@ -26,6 +26,7 @@ export interface Word {
   lastReviewedAt?: number;
   lapses?: number;
   mastery?: "manual" | "scheduled";
+  bankId?: string;
 }
 export interface Phrase {
   generated?: boolean;

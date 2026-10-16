@@ -7,6 +7,7 @@ import {
   type LearningState,
   type PartOfSpeech,
 } from "./data";
+import { WORD_BANK, NEW_SESSION_SIZE, bankEntry } from "./wordBank";
 export const DAY = 86400000;
 export const RETRY_DELAY = 5 * 60000;
 export const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30, 60, 120, 180] as const;
@@ -49,11 +50,13 @@ export function queueFor(
 ): Word[] {
   if (mode === "new") {
     const existing = new Set(words.map(meaningKey));
-    return CATALOG.filter((w) => !existing.has(meaningKey(w))).sort(
-      (a, b) =>
-        Number(interests.includes(b.topic)) -
-          Number(interests.includes(a.topic)) || a.addedAt - b.addedAt,
-    );
+    return [...CATALOG, ...WORD_BANK]
+      .filter((w) => !existing.has(meaningKey(w)))
+      .sort(
+        (a, b) =>
+          Number(interests.includes(b.topic)) -
+            Number(interests.includes(a.topic)) || a.addedAt - b.addedAt,
+      );
   }
   return words
     .filter(
@@ -67,6 +70,19 @@ export function queueFor(
       (a, b) =>
         a.dueAt - b.dueAt || a.addedAt - b.addedAt || a.id.localeCompare(b.id),
     );
+}
+export function studySessionFor(
+  words: Word[],
+  mode: Mode,
+  interests: Topic[] = [],
+  now = Date.now(),
+) {
+  const result: Word[] = [];
+  for (const word of queueFor(words, mode, interests, now)) {
+    if (canPractice(word)) result.push(word);
+    if (mode === "new" && result.length === NEW_SESSION_SIZE) break;
+  }
+  return result;
 }
 export function reviewWord(
   word: Word,
@@ -157,7 +173,12 @@ export function canPractice(word: Word) {
   const result =
     !!word.translation.trim() &&
     partOfSpeechFor(word) !== "unknown" &&
-    !!(word.concept || word.image || maskedContext(word)) &&
+    !!(
+      word.concept ||
+      word.image ||
+      maskedContext(word) ||
+      (bankEntry(word) && maskedDefinition(word).trim())
+    ) &&
     optionsFor(word, CATALOG, () => 0.5).length === 4;
   readiness.set(word, result);
   return result;
@@ -271,6 +292,37 @@ export function optionsFor(
   if (pos === "unknown") return [];
   const accepted = acceptedAnswers(word),
     blocked = new Set(accepted.map(normalize));
+  const bank = bankEntry(word);
+  if (bank) {
+    const translations = (value: string) =>
+      value.split(/[;,]/).map(normalize).filter(Boolean);
+    const meanings = translations(word.translation);
+    for (const candidate of pool) {
+      const labels = acceptedAnswers(candidate);
+      if (
+        labels.some((label) => blocked.has(normalize(label))) ||
+        translations(candidate.translation).some((value) =>
+          meanings.includes(value),
+        )
+      )
+        for (const label of labels) blocked.add(normalize(label));
+    }
+    const wrong = shuffled(
+      bank.distractors.filter((value) => !blocked.has(normalize(value))),
+      random,
+    );
+    const positives = [
+      word.word,
+      ...shuffled(
+        accepted.filter((v) => normalize(v) !== normalize(word.word)),
+        random,
+      ).slice(0, 1),
+    ];
+    const needed = 4 - positives.length;
+    return wrong.length < needed
+      ? []
+      : shuffled([...positives, ...wrong.slice(0, needed)], random);
+  }
   const all = [...CATALOG, ...pool];
   // Exclude reverse/transitive synonyms too. A known valid alternative must never be marked wrong.
   const graph = new Map<string, Set<string>>();

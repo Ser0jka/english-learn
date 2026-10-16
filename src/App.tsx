@@ -1,3 +1,4 @@
+import { WORD_BANK_MANIFEST } from "./wordBank";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
@@ -860,9 +861,9 @@ export default function App() {
           <div className="form-body">
             <span className="eyebrow">ЧТО ВАМ БЛИЖЕ?</span>
             <p className="muted">
-              Выбранные темы будут первыми в режиме «Новые слова». Это
-              фиксированная редакционная подборка, без ИИ и оценки вашего
-              уровня.
+              Выбранные темы будут первыми в режиме «Новые слова». Это подборка
+              редакционных и словарных значений. Темы словаря определены по
+              категориям WordNet; ИИ и оценка вашего уровня не используются.
             </p>
             <div className="interest-options">
               {(Object.entries(TOPICS) as [Topic, string][]).map(
@@ -1175,9 +1176,9 @@ function Home({
       </section>
       {mode === "new" && (
         <p className="content-note">
-          Новые слова — фиксированная редакционная подборка из {CATALOG.length}{" "}
-          значений. Выбранные темы идут первыми; частотность и ваш уровень
-          автоматически не оцениваются.
+          Новые слова — {WORD_BANK_MANIFEST.cards.toLocaleString("ru-RU")}{" "}
+          словарных карточек и {CATALOG.length} редакционных значений. Выбранные
+          темы идут первыми; уровень автоматически не оценивается.
         </p>
       )}
       <section className="practice-section">
@@ -1292,7 +1293,9 @@ function Home({
           <div className="discovery-top">
             <span className="eyebrow">
               <Sparkles size={14} />
-              ИЗ РЕДАКЦИОННОЙ ПОДБОРКИ
+              {discovery.bankId
+                ? "ИЗ СЛОВАРНОЙ БАЗЫ"
+                : "ИЗ РЕДАКЦИОННОЙ ПОДБОРКИ"}
             </span>
             <button
               className="icon-button"
@@ -1306,9 +1309,13 @@ function Home({
             </button>
           </div>
           <h3>{discovery.word}</h3>
-          <span className="phonetic">/{discovery.phonetic}/</span>
+          {discovery.phonetic && (
+            <span className="phonetic">/{discovery.phonetic}/</span>
+          )}
           <p className="discovery-translation">{discovery.translation}</p>
-          <p className="discovery-example">“{discovery.example}”</p>
+          {discovery.example && (
+            <p className="discovery-example">“{discovery.example}”</p>
+          )}
           <button
             className="discovery-button"
             onClick={() => {

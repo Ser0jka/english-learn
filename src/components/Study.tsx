@@ -37,6 +37,7 @@ import {
   normalize,
   optionsFor,
   queueFor,
+  studySessionFor,
   recordPractice,
   acceptedAnswers,
   isCorrectAnswer,
@@ -55,6 +56,7 @@ import WordArt from "./WordArt";
 import { materialRequest, useServiceStatus } from "../useMaterials";
 
 import ServiceNotice from "./ServiceNotice";
+import { bankEntry, WORD_BANK_MANIFEST, NEW_SESSION_SIZE } from "../wordBank";
 
 export function Flashcards({
   store,
@@ -71,7 +73,7 @@ export function Flashcards({
 }: StudyProps) {
   const vocabulary = useRef(store.words);
   const [deck, setDeck] = useState(() =>
-    queueFor(store.words, mode, store.interests, now).filter(canPractice),
+    studySessionFor(store.words, mode, store.interests, now),
   );
   const [index, setIndex] = useState(0);
   const answered = useRef(false);
@@ -105,16 +107,16 @@ export function Flashcards({
   );
   const correctAnswers = word ? acceptedAnswers(word) : [];
   const isCorrect = answer !== null && isCorrectAnswer(word, answer);
-  const skipped = (
-    mode === "learn"
-      ? store.words.filter((w) => w.status === "learning")
-      : queueFor(store.words, mode, store.interests, now)
-  ).filter((w) => !canPractice(w)).length;
+  const skipped =
+    mode === "new"
+      ? 0
+      : (mode === "learn"
+          ? store.words.filter((w) => w.status === "learning")
+          : queueFor(store.words, mode, store.interests, now)
+        ).filter((w) => !canPractice(w)).length;
   useEffect(() => {
     if (!deck.length && !finished) {
-      const eligible = queueFor(store.words, mode, store.interests, now).filter(
-        canPractice,
-      );
+      const eligible = studySessionFor(store.words, mode, store.interests, now);
       if (eligible.length) setDeck(eligible);
     }
   }, [store.words, now, mode, store.interests, deck.length, finished]);
@@ -145,11 +147,7 @@ export function Flashcards({
   }
   function restart() {
     vocabulary.current = store.words;
-    setDeck(
-      queueFor(store.words, mode, store.interests, Date.now()).filter(
-        canPractice,
-      ),
-    );
+    setDeck(studySessionFor(store.words, mode, store.interests, Date.now()));
     answered.current = false;
     setIndex(0);
     setAnswer(null);
@@ -201,7 +199,7 @@ export function Flashcards({
           {mode === "review"
             ? "Сейчас нет слов, которым пора на повторение. Изучаемые слова тоже появятся здесь в назначенный срок."
             : mode === "new"
-              ? "Вы добавили все слова из стартовой подборки. Пополните словарь своими."
+              ? "Вы добавили все доступные значения из подборки. Пополните словарь своими."
               : "Новые слова доступны сразу, повторные — только по сроку. Для задания нужны перевод, часть речи и картинка или пример с этим словом."}
         </p>
         {skipped > 0 && (
@@ -311,6 +309,22 @@ export function Flashcards({
     );
   return (
     <div className="study-layout">
+      {mode === "new" && (
+        <p className="content-note word-bank-notice">
+          {WORD_BANK_MANIFEST.cards.toLocaleString("ru-RU")} словарных карточек
+          и {CATALOG.length} редакционных значений. Сессия — до{" "}
+          {NEW_SESSION_SIZE} новых значений. Слово попадает в ваш словарь после
+          ответа. Определения — WordNet, переводы — OMW/Wiktionary; подбор
+          автоматический, без ИИ.{" "}
+          <a
+            href="/data/word-bank-credits.txt"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Источники и ограничения
+          </a>
+        </p>
+      )}
       <div className="flash-panel panel">
         <div className="study-top">
           <span className="eyebrow">
@@ -343,11 +357,17 @@ export function Flashcards({
           ) : (
             <div className="context-art">
               <BookOpen size={54} />
-              <span>Слово в контексте</span>
+              <span>
+                {bankEntry(word) ? "Словарное значение" : "Слово в контексте"}
+              </span>
             </div>
           )}
           <span className="image-label">
-            {word.image || word.concept ? "ОБРАЗ И КОНТЕКСТ" : "КОНТЕКСТ"}
+            {word.image || word.concept
+              ? "ОБРАЗ И КОНТЕКСТ"
+              : bankEntry(word)
+                ? "ОПРЕДЕЛЕНИЕ"
+                : "КОНТЕКСТ"}
           </span>
           <button
             className="art-help"
@@ -379,8 +399,9 @@ export function Flashcards({
           )}
           {mode === "new" && (
             <p className="muted small">
-              Из фиксированной редакционной подборки. Выбранные темы идут
-              первыми; уровень и частотность автоматически не оцениваются.
+              Выбранные темы идут первыми. В словарной базе порядок основан на
+              частоте слов в субтитрах; частота отдельных значений и ваш уровень
+              не оцениваются.
             </p>
           )}
           <div className="answer-grid">

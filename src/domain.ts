@@ -9,6 +9,7 @@ import {
   type Passage,
 } from "./data";
 import { newId } from "./id";
+import { findBankWord } from "./wordBank";
 
 export interface PracticeLog {
   at: number;
@@ -43,6 +44,7 @@ export {
   meaningKey,
   reviewWord,
   queueFor,
+  studySessionFor,
   optionsFor,
   acceptedAnswers,
   isCorrectAnswer,
@@ -89,6 +91,9 @@ export function validWord(value: unknown): value is Word {
     (value.mastery === undefined ||
       value.mastery === "manual" ||
       value.mastery === "scheduled") &&
+    (value.bankId === undefined ||
+      (typeof value.bankId === "string" &&
+        /^\d{8}-[nvar]$/.test(value.bankId))) &&
     shortText(value.id, 200) &&
     shortText(value.word, 100) &&
     /[a-z]/i.test(value.word) &&
@@ -130,7 +135,7 @@ export function validateStore(value: unknown): Store {
     !isRecord(value) ||
     value.version !== 1 ||
     !Array.isArray(value.words) ||
-    value.words.length > 10000 ||
+    value.words.length > 20000 ||
     !value.words.every(validWord) ||
     new Set(value.words.map((w) => w.id)).size !== value.words.length ||
     new Set(value.words.map(meaningKey)).size !== value.words.length ||
@@ -338,12 +343,13 @@ export function makeWord(
   translation: string,
   status: Word["status"] = "learning",
 ): Word {
-  const known = CATALOG.find(
-    (w) =>
-      normalize(w.word) === normalize(word) &&
-      (!translation.trim() ||
-        normalize(w.translation) === normalize(translation)),
-  );
+  const known =
+    CATALOG.find(
+      (w) =>
+        normalize(w.word) === normalize(word) &&
+        (!translation.trim() ||
+          normalize(w.translation) === normalize(translation)),
+    ) || findBankWord(word, translation);
   return {
     ...(known || {
       phonetic: "",
@@ -609,12 +615,18 @@ export function recordPractice(
         existing.example,
         existing.concept,
         existing.image,
+        existing.definition,
+        existing.partOfSpeech,
+        existing.bankId,
       ]) !==
         JSON.stringify([
           snapshot.synonyms,
           snapshot.example,
           snapshot.concept,
           snapshot.image,
+          snapshot.definition,
+          snapshot.partOfSpeech,
+          snapshot.bankId,
         ]) ||
       existing.dueAt !== snapshot.dueAt ||
       existing.lastReviewedAt !== snapshot.lastReviewedAt ||

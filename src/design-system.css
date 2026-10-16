@@ -1080,6 +1080,15 @@ legend {
   grid-template-columns: minmax(0, 2.2fr) minmax(240px, 0.85fr);
   gap: 24px;
 }
+.word-bank-notice {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.word-bank-notice a {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .study-top {
   padding: 20px 24px;
 }
