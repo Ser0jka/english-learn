@@ -30,7 +30,12 @@ test("dictionary cards work without images or AI, reveal meaning only after an a
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/#cards");
   await page.getByRole("button", { name: "Новые слова", exact: true }).click();
-  await expect(page.locator(".word-bank-notice")).toContainText("10");
+  await expect(
+    page
+      .locator(".study-actions")
+      .getByRole("button", { name: "Подобрать слова с ИИ" }),
+  ).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("WordNet");
   await expect(page.locator(".study-top")).toContainText("/ 10");
   await expect(page.locator(".answer-option")).toHaveCount(4);
   await expect(page.locator(".context-art")).toContainText(

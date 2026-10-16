@@ -1,5 +1,5 @@
 import GeneratedWords from "./GeneratedWords";
-import { PHRASE_BANK, PHRASE_BANK_MANIFEST } from "../phraseBank";
+import { PHRASE_BANK } from "../phraseBank";
 import { useWordLibrary } from "../useLibrary";
 import LibraryNotice from "./LibraryNotice";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -60,7 +60,7 @@ import WordArt from "./WordArt";
 import { materialRequest, useServiceStatus } from "../useMaterials";
 
 import ServiceNotice from "./ServiceNotice";
-import { bankEntry, WORD_BANK_MANIFEST, NEW_SESSION_SIZE } from "../wordBank";
+import { bankEntry } from "../wordBank";
 
 export function Flashcards({
   store,
@@ -323,19 +323,7 @@ export function Flashcards({
         />
       )}
       {mode === "new" && (
-        <p className="content-note word-bank-notice">
-          {WORD_BANK_MANIFEST.cards.toLocaleString("ru-RU")} словарных карточек
-          и {CATALOG.length} редакционных значений. Сессия — до{" "}
-          {NEW_SESSION_SIZE} новых значений. Слово попадает в ваш словарь после
-          ответа. Определения — WordNet, переводы — OMW/Wiktionary; подбор
-          автоматический, без ИИ.{" "}
-          <a
-            href="/data/word-bank-credits.txt"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Источники и ограничения
-          </a>
+        <div className="study-actions">
           <button
             className="button secondary"
             onClick={() => setGenerateOpen(true)}
@@ -343,7 +331,7 @@ export function Flashcards({
             <Sparkles size={16} />
             Подобрать слова с ИИ
           </button>
-        </p>
+        </div>
       )}
       <div className="flash-panel panel">
         <div className="study-top">
@@ -416,13 +404,6 @@ export function Flashcards({
           {maskedContext(word) && (
             <p className="card-context" lang="en">
               {maskedContext(word)}
-            </p>
-          )}
-          {mode === "new" && (
-            <p className="muted small">
-              Выбранные темы идут первыми. В словарной базе порядок основан на
-              частоте слов в субтитрах; частота отдельных значений и ваш уровень
-              не оцениваются.
             </p>
           )}
           <div className="answer-grid">
@@ -567,9 +548,8 @@ export function Flashcards({
           <div>
             <strong>В своём ритме</strong>
             <p>
-              После верных ответов: 1, 3, 7, 14, 30, 60, 120, 180 дней. После
-              ошибки — 5 минут и начало последовательности заново. Засчитываются
-              только ответы по сроку.
+              Верные ответы увеличивают интервал. После ошибки слово скоро
+              вернётся на повторение.
             </p>
           </div>
         </div>
@@ -592,8 +572,7 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
       {phrase.generated && (
         <p className="generated-note">
           <Sparkles size={14} />
-          Материал подобран помощником. Проверьте употребление по словарю;
-          история и цитаты не приписываются источникам.
+          Подобрано ИИ
         </p>
       )}
       <div className="detail-block">
@@ -601,44 +580,40 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
           <MessageCircle size={17} />
         </span>
         <div>
-          <h4>Когда и как употреблять</h4>
-          <p>{phrase.usage}</p>
+          <h4>{phrase.dictionary ? "Значение" : "Когда и как употреблять"}</h4>
+          {!phrase.dictionary && <p>{phrase.usage}</p>}
           {phrase.definition && <p lang="en">{phrase.definition}</p>}
         </div>
       </div>
-      <div className="detail-block">
-        <span className="detail-icon">
-          <Info size={17} />
-        </span>
-        <div>
-          <h4>Нюансы и исключения</h4>
-          <p>{phrase.exceptions}</p>
+      {!phrase.dictionary && (
+        <div className="detail-block">
+          <span className="detail-icon">
+            <Info size={17} />
+          </span>
+          <div>
+            <h4>Нюансы и исключения</h4>
+            <p>{phrase.exceptions}</p>
+          </div>
         </div>
-      </div>
-      <div className="detail-block">
-        <span className="detail-icon">
-          <History size={17} />
-        </span>
-        <div>
-          <h4>История выражения</h4>
-          <p>{phrase.origin}</p>
+      )}
+      {!phrase.dictionary && (
+        <div className="detail-block">
+          <span className="detail-icon">
+            <History size={17} />
+          </span>
+          <div>
+            <h4>История выражения</h4>
+            <p>{phrase.origin}</p>
+          </div>
         </div>
-      </div>
+      )}
       {phrase.example ? (
         <div className="phrase-example">
-          <span className="eyebrow">
-            {phrase.dictionary
-              ? "СЛОВАРНЫЙ ПРИМЕР · WORDNET"
-              : "УЧЕБНЫЙ ПРИМЕР · НЕ ЦИТАТА"}
-          </span>
+          <span className="eyebrow">ПРИМЕР</span>
           <p lang="en">“{phrase.example}”</p>
           {phrase.exampleRu && <span>{phrase.exampleRu}</span>}
         </div>
-      ) : (
-        <p className="content-note">
-          В исходном словаре нет примера для этого сочетания.
-        </p>
-      )}
+      ) : null}
       {phrase.quote && (
         <div className="source-quote">
           <span className="eyebrow">ИЗ ЛИТЕРАТУРЫ</span>
@@ -656,7 +631,7 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
         target="_blank"
         rel="noreferrer"
       >
-        Проверить значение: {phrase.source.label}
+        Открыть словарь
         <ExternalLink size={13} />
       </a>
     </div>
@@ -828,12 +803,6 @@ export function Phrases({
           Слово из моего списка
         </button>
       </div>
-      <p className="content-note">
-        {PHRASE_BANK_MANIFEST.phrases.toLocaleString("ru-RU")} словарных
-        сочетания и {PHRASES.length} редакционных выражений. В базе есть
-        глагольные выражения и составные названия; это не только идиомы. История
-        и частота не выдумываются.
-      </p>
       {phraseLibrary.status !== "ready" && (
         <LibraryNotice
           status={phraseLibrary.status}
@@ -845,7 +814,7 @@ export function Phrases({
         <span>
           {available
             ? "Нужны ещё варианты? Подберите выражения для своего слова."
-            : "Встроенная подборка доступна сразу. Расширенный поиск — при подключении помощника."}
+            : "Ищите выражения по слову или выберите слово из своего списка."}
         </span>
         <button
           className="text-button gold"
@@ -896,9 +865,6 @@ export function Phrases({
           {phrases.length}{" "}
           {plural(phrases.length, ["выражение", "выражения", "выражений"])} в
           подборке
-        </span>
-        <span>
-          Редакционная подборка, затем словарь <Info size={13} />
         </span>
       </div>
       <div className="phrase-list">
@@ -1001,13 +967,6 @@ export function Phrases({
           </button>
         </div>
       )}
-      <p className="content-note">
-        <Info size={14} />
-        Редакционные выражения дополнены базой WordNet/OMW. Словарные сочетания
-        не имеют подтверждённого частотного рейтинга. Материалы помощника
-        помечены отдельно и требуют проверки. Частотность приблизительна.
-        Учебные примеры отделены от цитат; переводы выполнены для приложения.
-      </p>
     </>
   );
 }
@@ -1214,7 +1173,6 @@ export function Reading({
             <Sparkles size={14} />
             ИСТОРИЯ ИЗ ВАШИХ СЛОВ
           </span>
-          <p>Новый небольшой текст с лексикой из выбранного режима.</p>
           <ServiceNotice connection={connection} />
           <button
             className="button secondary full"
@@ -1246,10 +1204,7 @@ export function Reading({
         <div className="panel small-panel reading-legend">
           <span className="eyebrow">ЗНАКОМЫЕ СЛОВА РЯДОМ</span>
           <p>Нажмите на выделенное слово, чтобы вспомнить его значение.</p>
-          <p>
-            Подсветка ищет совпадения в написании. Подходящее к контексту
-            значение выберите сами; чтение не повышает статус слова.
-          </p>
+          <p>Выберите значение, которое подходит по смыслу.</p>
           <div>
             <span className="legend-sample learning">учу</span>
             <span className="legend-sample known">знаю</span>
@@ -1290,10 +1245,7 @@ export function Reading({
             )}
             {selectedSenses.length > 1 && (
               <div className="sense-picker">
-                <p>
-                  В словаре и подборке несколько значений. Выберите подходящее к
-                  тексту — автоматически значение не определяется.
-                </p>
+                <p>Выберите подходящее значение.</p>
                 {selectedSenses.map((w) => (
                   <button
                     className="button secondary"

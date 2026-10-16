@@ -30,7 +30,7 @@ export function registerPhraseBank(input: unknown) {
     translation: w.translation,
     keywords: w.word.split(/[ -]/),
     frequency: 1000 + i,
-    frequencyLabel: `${labels[rows[i][10] || "phrase"]} · WordNet`,
+    frequencyLabel: labels[rows[i][10] || "phrase"],
     usage: `${labels[rows[i][10] || "phrase"]}. Значение уточняется по английскому определению ниже. Частотность и уместность в вашей ситуации отдельно не проверены.`,
     exceptions:
       "Отдельной справки об исключениях в этой базе нет. Сверяйте с контекстом; не считайте синонимы взаимозаменяемыми во всех случаях.",

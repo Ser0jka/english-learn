@@ -81,14 +81,6 @@ export default function GeneratedWords({
     >
       <div className="form-body">
         <ServiceNotice connection={connection} />
-        <p className="muted small">
-          Это материал подключённой языковой модели. Перевод и пример могут
-          содержать ошибки; проверьте их перед сохранением. Новые рисунки здесь
-          не создаются.
-        </p>
-        <p className="muted small">
-          Для исключения повторов в запрос включаются до 100 последних слов.
-        </p>
         <label>
           Направление
           <select

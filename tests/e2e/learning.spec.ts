@@ -121,7 +121,7 @@ test("different meanings have different material and progress and reading asks w
     .first()
     .click();
   await expect(page.locator(".sense-picker")).toContainText(
-    "автоматически значение не определяется",
+    "Выберите подходящее значение.",
   );
   await page
     .locator(".sense-picker")
@@ -189,14 +189,18 @@ test("due states and an empty queue refresh automatically at the deadline", asyn
 }) => {
   const start = Date.now();
   await page.clock.install({ time: start });
+  await page.clock.pauseAt(start + 1000);
   await singleWord(page);
   await correct(page);
+  const dueAt = (await state(page)).words[0].dueAt;
   await page.reload();
   await expect(page.locator(".answer-option")).toHaveCount(0);
-  await page.clock.setSystemTime(start + DAY - 1000);
+  await page.clock.setSystemTime(dueAt - 1000);
   await page.reload();
   await expect(page.locator(".answer-option")).toHaveCount(0);
-  await page.clock.runFor(1100);
+  await page.clock.runFor(999);
+  await expect(page.locator(".answer-option")).toHaveCount(0);
+  await page.clock.runFor(1);
   await expect(page.locator(".answer-option")).toHaveCount(4);
   await page.goto("/#words");
   await expect(page.locator(".word-status")).toContainText("Пора повторить");

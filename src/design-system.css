@@ -1080,16 +1080,8 @@ legend {
   grid-template-columns: minmax(0, 2.2fr) minmax(240px, 0.85fr);
   gap: 24px;
 }
-.content-note.word-bank-notice {
+.study-actions {
   grid-column: 1 / -1;
-  margin: 0;
-  display: block;
-  min-width: 0;
-}
-.word-bank-notice a {
-  color: var(--gold-bright);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 .study-top {
   padding: 20px 24px;
@@ -1477,26 +1469,6 @@ legend {
   font-size: 13px;
   display: flex;
   color: var(--gold);
-}
-.service-setup {
-  margin-top: 8px;
-}
-.service-setup summary {
-  cursor: pointer;
-  min-height: 44px;
-  padding-block: 10px;
-  color: var(--gold-bright);
-}
-.service-setup p {
-  margin-block: 8px;
-}
-.service-setup pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  padding: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 .service-notice[data-status="offline"] {
   border-color: #a98c62;

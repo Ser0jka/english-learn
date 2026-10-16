@@ -90,7 +90,7 @@ test("phone appearance settings preview all accents accessibly and survive reloa
     feedbackGlow: false,
   });
 });
-test("missing AI setup explains local configuration and can be rechecked without losing the request", async ({
+test("AI errors stay concise and can be retried without losing the request", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 });
@@ -108,16 +108,14 @@ test("missing AI setup explains local configuration and can be rechecked without
   });
   await expect(generate).toBeDisabled();
   await expect(dialog.locator(".service-notice")).toContainText(
-    "отсутствует API-ключ",
+    "Помощник сейчас недоступен.",
   );
-  await dialog.getByText("Как подключить ИИ", { exact: true }).click();
-  await expect(dialog.locator(".service-setup")).toContainText(".env.local");
-  await expect(dialog.locator(".service-setup pre")).toContainText(
-    "https://api.groq.com/openai/v1",
-  );
-  await expect(dialog.locator(".service-setup")).toContainText(
-    "перезапустите сервер",
-  );
+  await expect(dialog).not.toContainText("API");
+  await expect(dialog).not.toContainText(".env.local");
+  await expect(dialog).not.toContainText("Groq");
+  await expect(
+    dialog.getByText("Как подключить ИИ", { exact: true }),
+  ).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -130,14 +128,12 @@ test("missing AI setup explains local configuration and can be rechecked without
   expect(a11y.violations.map((v) => v.id)).toEqual([]);
   await dialog.getByLabel("Какие слова подобрать?").fill("Слова для аэропорта");
   configured = true;
-  await dialog.getByRole("button", { name: "Проверить подключение" }).click();
+  await dialog.getByRole("button", { name: "Попробовать снова" }).click();
   await expect(generate).toBeEnabled();
   await expect(dialog.getByLabel("Какие слова подобрать?")).toHaveValue(
     "Слова для аэропорта",
   );
-  await expect(dialog.locator(".service-notice")).toContainText(
-    "ИИ настроен на сервере",
-  );
+  await expect(dialog.locator(".service-notice")).toHaveCount(0);
 });
 test("AI vocabulary preview handles failure and saves only selected ready words", async ({
   page,
@@ -211,10 +207,17 @@ test("dictionary expressions paginate, explain their source and become repeatabl
   await page
     .getByRole("button", { name: "Подробнее: fall asleep", exact: true })
     .click();
-  await expect(page.locator(".phrase-details")).toContainText("WordNet");
-  await expect(page.locator(".phrase-details")).toContainText(
+  await expect(
+    page.locator(".phrase-details").getByRole("heading", { name: "Значение" }),
+  ).toBeVisible();
+  await expect(page.locator(".phrase-details")).not.toContainText(
     "Подтверждённой истории",
   );
+  await expect(
+    page
+      .locator(".phrase-details")
+      .getByRole("link", { name: "Открыть словарь" }),
+  ).toHaveAttribute("href", /wordnetweb.princeton.edu/);
   await page
     .getByRole("button", { name: "Учить: fall asleep", exact: true })
     .click();
@@ -231,34 +234,44 @@ test("dictionary expressions paginate, explain their source and become repeatabl
   expect(saved.words[0].sourcePhraseId).toMatch(/^wnphrase-/);
   expect(saved.words[0].successes).toBe(1);
 });
-test("a failed dictionary integrity check is recoverable without touching progress", async ({
-  page,
-}) => {
-  await page.addInitScript(
-    ({ key, state }) => {
-      if (!localStorage.getItem(key))
-        localStorage.setItem(key, JSON.stringify(state));
-    },
-    { key, state: { ...emptyStore(), words: CATALOG } },
-  );
-  let attempts = 0;
-  await page.route("**/data/word-bank.json", (route) => {
-    attempts++;
-    return attempts === 1
-      ? route.fulfill({ contentType: "application/json", body: "[]" })
-      : route.continue();
+test.describe("dictionary request failure", () => {
+  // Route injection must reach fetch; the PWA has its own offline test below.
+  test.use({ serviceWorkers: "block" });
+  test("a failed dictionary integrity check is recoverable without touching progress", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ key, state }) => {
+        if (!localStorage.getItem(key))
+          localStorage.setItem(key, JSON.stringify(state));
+      },
+      { key, state: { ...emptyStore(), words: CATALOG } },
+    );
+    let attempts = 0;
+    await page.route("**/data/word-bank.json", (route) => {
+      attempts++;
+      return attempts === 1
+        ? route.fulfill({ contentType: "application/json", body: "[]" })
+        : route.continue();
+    });
+    await page.goto("/#cards");
+    await page
+      .getByRole("button", { name: "Новые слова", exact: true })
+      .click();
+    await expect(page.getByRole("alert")).toContainText(
+      "Словарь не загрузился",
+    );
+    expect(attempts).toBe(1);
+    await page.getByRole("button", { name: "Повторить загрузку" }).click();
+    await expect(page.locator(".answer-option")).toHaveCount(4);
+    expect(attempts).toBe(2);
+    expect(
+      await page.evaluate(
+        (k) => JSON.parse(localStorage.getItem(k)!).words.length,
+        key,
+      ),
+    ).toBe(CATALOG.length);
   });
-  await page.goto("/#cards");
-  await page.getByRole("button", { name: "Новые слова", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Словарь не загрузился");
-  await page.getByRole("button", { name: "Повторить загрузку" }).click();
-  await expect(page.locator(".answer-option")).toHaveCount(4);
-  expect(
-    await page.evaluate(
-      (k) => JSON.parse(localStorage.getItem(k)!).words.length,
-      key,
-    ),
-  ).toBe(CATALOG.length);
 });
 if (process.env.E2E_PRODUCTION === "1")
   test("installed production shell and opened dictionaries work offline without caching API responses", async ({

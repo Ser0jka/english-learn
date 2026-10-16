@@ -280,11 +280,6 @@ export default function Help({
           <ArrowUp size={20} />
         </button>
       </form>
-      <p className="chat-disclaimer">
-        {available
-          ? "Ответы помощника стоит проверять. Достоверные источники указаны в справках."
-          : "Ответы из встроенных материалов. Источники — в справках выражений."}
-      </p>
     </Modal>
   );
 }

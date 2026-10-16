@@ -5,7 +5,6 @@ import AppearanceSettings from "./components/AppearanceSettings";
 import GeneratedWords from "./components/GeneratedWords";
 import { useWordLibrary } from "./useLibrary";
 import LibraryNotice from "./components/LibraryNotice";
-import { WORD_BANK_MANIFEST } from "./wordBank";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
@@ -960,11 +959,7 @@ export default function App() {
         >
           <div className="form-body">
             <span className="eyebrow">ЧТО ВАМ БЛИЖЕ?</span>
-            <p className="muted">
-              Выбранные темы будут первыми в режиме «Новые слова». Это подборка
-              редакционных и словарных значений. Темы словаря определены по
-              категориям WordNet; ИИ и оценка вашего уровня не используются.
-            </p>
+            <p className="muted">Выберите темы, которые вам интересны.</p>
             <div className="interest-options">
               {(Object.entries(TOPICS) as [Topic, string][]).map(
                 ([id, label]) => (
@@ -1050,6 +1045,14 @@ export default function App() {
               <ArrowDownToLine size={17} />
               Экспортировать словарь
             </button>
+            <a
+              className="text-button"
+              href="/data/word-bank-credits.txt"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Источники и лицензии
+            </a>
             <button
               className="button primary full"
               onClick={() => setSettings(false)}
@@ -1279,13 +1282,6 @@ function Home({
           </p>
         </div>
       </section>
-      {mode === "new" && (
-        <p className="content-note">
-          Новые слова — {WORD_BANK_MANIFEST.cards.toLocaleString("ru-RU")}{" "}
-          словарных карточек и {CATALOG.length} редакционных значений. Выбранные
-          темы идут первыми; уровень автоматически не оценивается.
-        </p>
-      )}
       <section className="practice-section">
         <div className="section-heading">
           <div>

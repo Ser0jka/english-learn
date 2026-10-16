@@ -335,9 +335,7 @@ test("additional expressions are labelled and saved using the optional service",
   await page
     .getByRole("button", { name: "Подробнее: a dream come true" })
     .click();
-  await expect(page.locator(".generated-note")).toContainText(
-    "Материал подобран помощником",
-  );
+  await expect(page.locator(".generated-note")).toContainText("Подобрано ИИ");
   const state = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)!),
     KEY,

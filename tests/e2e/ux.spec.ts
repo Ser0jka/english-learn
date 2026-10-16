@@ -91,9 +91,11 @@ test("keyboard tabs, preview duplicates, errors and image completion are actiona
     .getByRole("button", { name: "Добавить иллюстрацию", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText("serendipity");
-  await expect(page.getByRole("dialog")).toContainText(
-    "Можно загрузить свою картинку",
-  );
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Своя картинка", exact: true }),
+  ).toBeEnabled();
 });
 test("autofill never leaves a translation for the previous word", async ({
   page,
@@ -170,16 +172,14 @@ test("helper distinguishes loading, offline and unconfigured and retries connect
     "data-status",
     "loading",
   );
-  await expect(page.locator(".service-notice")).toContainText(
-    "Проверяем доступность",
-  );
+  await expect(page.locator(".service-notice")).toContainText("Подключаемся…");
   release();
   await expect(page.locator(".service-notice")).toHaveAttribute(
     "data-status",
     "offline",
   );
   online = true;
-  await page.getByRole("button", { name: "Повторить подключение" }).click();
+  await page.getByRole("button", { name: "Попробовать снова" }).click();
   await expect(page.locator(".service-notice")).toHaveAttribute(
     "data-status",
     "unconfigured",
@@ -317,10 +317,7 @@ test("assistant displays loading and server error then resends the failed questi
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Открыть помощника" }).click();
-  await expect(page.locator(".service-notice")).toHaveAttribute(
-    "data-status",
-    "ready",
-  );
+  await expect(page.locator(".service-notice")).toHaveCount(0);
   await page.getByLabel("Ваш вопрос").fill("Explain forest in simple English");
   await page.getByRole("button", { name: "Отправить вопрос" }).click();
   await expect(page.locator(".chat-form")).toHaveAttribute("aria-busy", "true");
