@@ -2,6 +2,7 @@ import express from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Server } from "node:http";
 import { registerAi } from "../ai.mjs";
+import { findBookCandidates } from "../book-contexts.mjs";
 
 const realFetch = globalThis.fetch;
 let server: Server;
@@ -52,6 +53,188 @@ const mockCompletion = (value: unknown) => {
   vi.stubGlobal("fetch", mock);
   return mock;
 };
+const completionResponse = (value: unknown) =>
+  Response.json({ choices: [{ message: { content: JSON.stringify(value) } }] });
+describe("grounded book context", () => {
+  it("bounds candidate context for a batch and keeps separate phrase IDs", async () => {
+    const mock = mockCompletion({ selections: [] });
+    const response = await post("/api/materials/contexts", {
+      phrases: Array.from({ length: 5 }, (_, index) => ({
+        id: `phrase-${index}`,
+        text: "look after",
+        translation: "присматривать",
+        definition: "x".repeat(1500),
+        usage: "y".repeat(1500),
+      })),
+    });
+    expect(response.status).toBe(200);
+    const prompt = JSON.parse(String(mock.mock.calls[0][1]?.body)).messages[1]
+      .content as string;
+    const payload = prompt.split("Материалы: ")[1];
+    expect(payload.length).toBeLessThanOrEqual(12000);
+    const groups = JSON.parse(payload);
+    expect(groups).toHaveLength(5);
+    expect(
+      new Set(
+        groups.map((group: { phrase: { id: string } }) => group.phrase.id),
+      ).size,
+    ).toBe(5);
+    expect(
+      groups.every(
+        (group: { candidates: unknown[] }) => group.candidates.length <= 2,
+      ),
+    ).toBe(true);
+  });
+  it("automatically searches new expressions and takes quotes and authors only from the corpus", async () => {
+    const mock = vi.fn<typeof fetch>(async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      const prompt = body.messages[1].content as string;
+      if (!prompt.includes("Материалы: "))
+        return completionResponse({
+          phrases: [
+            {
+              text: "look after",
+              translation: "присматривать за",
+              usage: "Забота о ком-то.",
+              exceptions: "Не путать с поиском.",
+              example: "I look after the child.",
+              exampleRu: "Я присматриваю за ребёнком.",
+            },
+          ],
+        });
+      const [group] = JSON.parse(prompt.split("Материалы: ")[1]);
+      return completionResponse({
+        selections: [
+          {
+            phraseId: group.phrase.id,
+            candidateId: group.candidates[0].id,
+            matchesMeaning: true,
+            confidence: "high",
+            summary: "Ситуация из настоящего абзаца.",
+            note: "Забота о детях.",
+            text: "Invented quotation",
+            author: "Invented author",
+            url: "https://example.invalid",
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", mock);
+    const response = await post("/api/materials/phrases", { word: "look" });
+    expect(response.status).toBe(200);
+    const { phrases } = await response.json();
+    const [candidate] = await findBookCandidates("look after");
+    expect(phrases[0].contextStatus).toBe("found");
+    expect(phrases[0].bookQuotes[0].translationKind).toBe("summary");
+    expect(phrases[0].bookQuotes[0].translation).toBe(
+      "Ситуация из настоящего абзаца.",
+    );
+    expect(phrases[0].bookQuotes[0]).toMatchObject({
+      text: candidate.text,
+      author: candidate.author,
+      title: candidate.title,
+      bookId: candidate.bookId,
+      paragraph: candidate.paragraph,
+    });
+    expect(JSON.stringify(phrases)).not.toContain("Invented");
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+  it("rejects unknown citation IDs and uncertain or wrong-meaning selections", async () => {
+    const [candidate] = await findBookCandidates("take off");
+    mockCompletion({
+      selections: [
+        {
+          phraseId: "take",
+          candidateId: candidate.id,
+          matchesMeaning: false,
+          confidence: "high",
+          translation: "Перевод",
+          note: "Другой смысл",
+        },
+        {
+          phraseId: "take",
+          candidateId: candidate.id,
+          matchesMeaning: true,
+          confidence: "low",
+          translation: "Перевод",
+          note: "Не уверен",
+        },
+        {
+          phraseId: "take",
+          candidateId: "unknown",
+          matchesMeaning: true,
+          confidence: "high",
+          translation: "Перевод",
+          note: "Поддельный ID",
+        },
+      ],
+    });
+    const response = await post("/api/materials/contexts", {
+      phrases: [{ id: "take", text: "take off", translation: "взлетать" }],
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).contexts).toEqual([
+      { id: "take", status: "not-found", quotes: [] },
+    ]);
+  });
+  it("does not contact a provider when the corpus has no occurrences", async () => {
+    const mock = mockCompletion("unused");
+    const response = await post("/api/materials/contexts", {
+      phrases: [
+        {
+          id: "missing",
+          text: "xyzzy plugh",
+          translation: "несуществующая фраза",
+        },
+      ],
+    });
+    expect((await response.json()).contexts[0].status).toBe("not-found");
+    expect(mock).not.toHaveBeenCalled();
+  });
+  it("keeps generated expressions when checking book meaning fails", async () => {
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(async () => {
+        if (calls++ > 0)
+          return new Response("private diagnostics", { status: 429 });
+        return completionResponse({
+          phrases: [
+            {
+              text: "look after",
+              translation: "присматривать",
+              usage: "Забота.",
+              exceptions: "Нюанс.",
+              example: "I look after him.",
+              exampleRu: "Я присматриваю за ним.",
+            },
+          ],
+        });
+      }),
+    );
+    const response = await post("/api/materials/phrases", { word: "look" });
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.phrases[0]).toMatchObject({
+      text: "look after",
+      bookQuotes: [],
+      contextStatus: "unavailable",
+    });
+    expect(JSON.stringify(data)).not.toContain("private diagnostics");
+  });
+  it("validates bounded context batches before contacting the provider", async () => {
+    const mock = mockCompletion("unused");
+    for (const phrases of [
+      [],
+      Array(6).fill({ id: "a", text: "take off", translation: "взлетать" }),
+      [{ id: "a", text: "take off", translation: "x".repeat(301) }],
+    ])
+      expect((await post("/api/materials/contexts", { phrases })).status).toBe(
+        400,
+      );
+    expect(mock).not.toHaveBeenCalled();
+  });
+});
 describe("optional AI API", () => {
   it("returns a clear unavailable response without credentials", async () => {
     vi.stubEnv("LEXI_API_KEY", "");

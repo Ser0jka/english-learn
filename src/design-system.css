@@ -3849,3 +3849,115 @@ body::before {
     isolation: isolate;
   }
 }
+
+/* Real book context and the full-text reader share the application controls. */
+.book-library-bar,
+.book-library-bar > span,
+.book-search-status,
+.book-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.book-library-bar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.book-contexts {
+  min-width: 0;
+  margin-top: 24px;
+}
+.book-search-status {
+  color: var(--muted);
+  font-size: 14px;
+}
+.book-search-status svg {
+  flex-shrink: 0;
+}
+.book-contexts mark,
+.book-reader mark {
+  color: var(--gold-bright);
+  background: var(--surface-warm);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.context-model-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+.source-quote button.context-excerpt {
+  display: block;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-decoration-color: var(--brass);
+  text-underline-offset: 4px;
+}
+.modal-book {
+  max-width: 820px;
+}
+.book-reader {
+  padding: clamp(16px, 4vw, 32px);
+  overflow-wrap: anywhere;
+}
+.book-page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.book-page-controls > span {
+  color: var(--muted);
+  font-size: 14px;
+}
+.book-page-heading {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 12px 0;
+}
+.book-prose {
+  font-size: 18px;
+  line-height: 1.85;
+}
+.book-prose p {
+  white-space: pre-wrap;
+  margin-bottom: 1.25em;
+}
+.book-selected-passage {
+  border-left: 3px solid var(--gold);
+  padding-left: 14px;
+}
+.book-source-links {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 14px;
+}
+.book-source-links a {
+  color: var(--gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 480px) {
+  .book-prose {
+    font-size: 17px;
+  }
+  .book-library-bar > .text-button {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .book-page-controls > .button {
+    flex: 1;
+  }
+}

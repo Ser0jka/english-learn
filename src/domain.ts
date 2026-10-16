@@ -9,6 +9,7 @@ import {
   type Topic,
   type Phrase,
   type Passage,
+  type PhraseQuote,
 } from "./data";
 import { newId } from "./id";
 import { findBankWord } from "./wordBank";
@@ -29,6 +30,7 @@ export interface Store {
   interests: Topic[];
   dailyGoal?: number;
   appearance?: Appearance;
+  bookContexts?: Record<string, { signature: string; quotes: PhraseQuote[] }>;
 }
 export const STORAGE_KEY = "lexi.workspace.v1";
 export const emptyStore = (): Store => ({
@@ -141,6 +143,19 @@ export function validateStore(value: unknown): Store {
     !isRecord(value) ||
     value.version !== 1 ||
     (value.appearance !== undefined && !validAppearance(value.appearance)) ||
+    (value.bookContexts !== undefined &&
+      (!isRecord(value.bookContexts) ||
+        Object.keys(value.bookContexts).length > 500 ||
+        !Object.entries(value.bookContexts).every(
+          ([key, context]) =>
+            shortText(key, 200) &&
+            isRecord(context) &&
+            shortText(context.signature, 5000) &&
+            Array.isArray(context.quotes) &&
+            context.quotes.length > 0 &&
+            context.quotes.length <= 3 &&
+            context.quotes.every(validPhraseQuote),
+        ))) ||
     !Array.isArray(value.words) ||
     value.words.length > 20000 ||
     !value.words.every(validWord) ||
@@ -199,6 +214,9 @@ export function validateStore(value: unknown): Store {
     interests: [...new Set(value.interests as Topic[])],
     customPhrases,
     customPassages,
+    ...(value.bookContexts === undefined
+      ? {}
+      : { bookContexts: value.bookContexts as Store["bookContexts"] }),
     ...(value.appearance === undefined
       ? {}
       : { appearance: value.appearance as Appearance }),
@@ -535,9 +553,35 @@ export function speak(text: string) {
   return true;
 }
 
+export function validPhraseQuote(quote: unknown): quote is PhraseQuote {
+  return (
+    isRecord(quote) &&
+    ["text", "translation", "author"].every((key) =>
+      shortText(quote[key], 4000),
+    ) &&
+    httpsUrl(quote.url) &&
+    (quote.translationKind === undefined ||
+      quote.translationKind === "summary") &&
+    (quote.kind === undefined ||
+      (typeof quote.kind === "string" &&
+        ["book", "article", "play", "speech"].includes(quote.kind))) &&
+    ["title", "location", "note"].every(
+      (key) => quote[key] === undefined || shortText(quote[key], 1000),
+    ) &&
+    ((quote.bookId === undefined && quote.paragraph === undefined) ||
+      (typeof quote.bookId === "string" &&
+        /^\d{1,6}$/.test(quote.bookId) &&
+        Number.isSafeInteger(quote.paragraph) &&
+        (quote.paragraph as number) >= 0 &&
+        (quote.paragraph as number) <= 100000)) &&
+    (quote.match === undefined ||
+      (shortText(quote.match, 150) &&
+        typeof quote.text === "string" &&
+        quote.text.includes(quote.match as string)))
+  );
+}
 export function validPhrase(p: unknown): p is Phrase {
   if (!isRecord(p)) return false;
-  const quote = p.quote;
   return (
     shortText(p.id, 200) &&
     shortText(p.text, 100) &&
@@ -558,18 +602,14 @@ export function validPhrase(p: unknown): p is Phrase {
     shortText(p.source.label, 300) &&
     httpsUrl(p.source.url) &&
     (p.generated === undefined || typeof p.generated === "boolean") &&
-    (quote === undefined ||
-      (isRecord(quote) &&
-        ["text", "translation", "author"].every((k) =>
-          shortText(quote[k], 4000),
-        ) &&
-        httpsUrl(quote.url) &&
-        (quote.kind === undefined ||
-          (typeof quote.kind === "string" &&
-            ["book", "article", "play", "speech"].includes(quote.kind))) &&
-        ["title", "location", "note"].every(
-          (k) => quote[k] === undefined || shortText(quote[k], 1000),
-        )))
+    (p.quote === undefined || validPhraseQuote(p.quote)) &&
+    (p.bookQuotes === undefined ||
+      (Array.isArray(p.bookQuotes) &&
+        p.bookQuotes.length <= 3 &&
+        p.bookQuotes.every(validPhraseQuote))) &&
+    (p.contextStatus === undefined ||
+      (typeof p.contextStatus === "string" &&
+        ["found", "not-found", "unavailable"].includes(p.contextStatus)))
   );
 }
 export function validPassage(p: unknown): p is Passage {

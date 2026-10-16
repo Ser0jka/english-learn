@@ -45,12 +45,14 @@ export function useCapabilities(kind: "text" | "image" = "text") {
   return useServiceStatus(kind).available;
 }
 export async function materialRequest<T>(
-  kind: "words" | "phrases" | "reading" | "image",
+  kind: "words" | "phrases" | "reading" | "image" | "contexts",
   body: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
   try {
-    const timeout = AbortSignal.timeout(kind === "image" ? 125000 : 55000);
+    const timeout = AbortSignal.timeout(
+      kind === "image" || kind === "phrases" ? 125000 : 55000,
+    );
     const response = await fetch(`/api/materials/${kind}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "revision": "8cbc3eeb430440681d4fba228bcfe261669ef0466bdd6214bf67c58071d61678",
+  "books": [
+    {
+      "id": "1342",
+      "title": "Pride and Prejudice",
+      "author": "Джейн Остин",
+      "year": 1813,
+      "source": "https://www.gutenberg.org/ebooks/1342",
+      "sha256": "a226f1c27617f0f78608a91dfb09cc378d1139cc5d45965a8f75648a61244f37",
+      "sourceSha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "paragraphs": 2128,
+      "bytes": 761700
+    },
+    {
+      "id": "11",
+      "title": "Alice’s Adventures in Wonderland",
+      "author": "Льюис Кэрролл",
+      "year": 1865,
+      "source": "https://www.gutenberg.org/ebooks/11",
+      "sha256": "326a95269fe9d415c4ed438a65fe06ba5bda6adab2bed2f8b713e1fac4386359",
+      "sourceSha256": "49a0b2726606e1290ac03a63978fa1dd1bd38a8d805704d98265f393533ea094",
+      "paragraphs": 820,
+      "bytes": 196064
+    },
+    {
+      "id": "1661",
+      "title": "The Adventures of Sherlock Holmes",
+      "author": "Артур Конан Дойл",
+      "year": 1892,
+      "source": "https://www.gutenberg.org/ebooks/1661",
+      "sha256": "2485a15de09534d1900367e4bfedb15779714cfe16522abe235c27fcae496ef7",
+      "sourceSha256": "2a0ce5568625a304f54fbb6bfdeeadf527a1437254b5f0e06b5a9e233d4784a2",
+      "paragraphs": 2543,
+      "bytes": 626042
+    },
+    {
+      "id": "55",
+      "title": "The Wonderful Wizard of Oz",
+      "author": "Лаймен Фрэнк Баум",
+      "year": 1900,
+      "source": "https://www.gutenberg.org/ebooks/55",
+      "sha256": "19299d2b732021c23ef9d95f7ccc9cda6bc1b638278d2df8de69acd210d87b9d",
+      "sourceSha256": "18274f31ae11aea07ea9b4f707998636c6f75d784c60d7e8fea0b4d5c2d77af6",
+      "paragraphs": 1140,
+      "bytes": 235869
+    },
+    {
+      "id": "113",
+      "title": "The Secret Garden",
+      "author": "Фрэнсис Ходжсон Бёрнетт",
+      "year": 1911,
+      "source": "https://www.gutenberg.org/ebooks/113",
+      "sha256": "c5edeaf399873cbd948a9430df51305e10e90e1fc3c7a767a784aeedd1ddab4b",
+      "sourceSha256": "5d5bd30cb79d2f9302d99f822cc342f268dcd327d800e0ba3790596b5ef09648",
+      "paragraphs": 2106,
+      "bytes": 505334
+    },
+    {
+      "id": "45",
+      "title": "Anne of Green Gables",
+      "author": "Люси Мод Монтгомери",
+      "year": 1908,
+      "source": "https://www.gutenberg.org/ebooks/45",
+      "sha256": "97052e4cb6c024200c6088ca041f0362f70c8ccf5d1b5aedf7d37d093ed0fa97",
+      "sourceSha256": "de84735904a9023e2a2447dec5e30e9ea4e5d92d6e23f38c6e07f3df9ce0191a",
+      "paragraphs": 1832,
+      "bytes": 680682
+    },
+    {
+      "id": "74",
+      "title": "The Adventures of Tom Sawyer",
+      "author": "Марк Твен",
+      "year": 1876,
+      "source": "https://www.gutenberg.org/ebooks/74",
+      "sha256": "57c116d261c5808da86dd1a8b8ecf1773c12eec2248c9869ed6550c27bd5e121",
+      "sourceSha256": "5efdc59219386fcde4e500a907083ffd12ac51989d095b178605c6256db2b223",
+      "paragraphs": 1900,
+      "bytes": 455613
+    },
+    {
+      "id": "120",
+      "title": "Treasure Island",
+      "author": "Роберт Льюис Стивенсон",
+      "year": 1883,
+      "source": "https://www.gutenberg.org/ebooks/120",
+      "sha256": "a6ef27c6fd6068a3a49d257b7d714319810ef6fa3bed35ba67e12cc8d2e25024",
+      "sourceSha256": "6c37a18a886b4c12eaf4e5ff301813186616c7ee899c268db94eddd433027da7",
+      "paragraphs": 1472,
+      "bytes": 399456
+    },
+    {
+      "id": "236",
+      "title": "The Jungle Book",
+      "author": "Редьярд Киплинг",
+      "year": 1894,
+      "source": "https://www.gutenberg.org/ebooks/236",
+      "sha256": "849579e80920f7512f53368bd554b47e0cb3bc245ae9c6dd2c37a904adc561ff",
+      "sourceSha256": "e78970f1aa6734f575b0721616424b7253060df1d81f82c513f34ae07cca0282",
+      "paragraphs": 980,
+      "bytes": 296339
+    },
+    {
+      "id": "215",
+      "title": "The Call of the Wild",
+      "author": "Джек Лондон",
+      "year": 1903,
+      "source": "https://www.gutenberg.org/ebooks/215",
+      "sha256": "c9395aedd179860cffa3d90549ab6072db6fdcdceec00b846bb5fd7fed1ebfca",
+      "sourceSha256": "58df9556f1f2a05e9e227f7f79ee9a763f84eaed70457937e803266d76f471be",
+      "paragraphs": 345,
+      "bytes": 196324
+    }
+  ]
+}

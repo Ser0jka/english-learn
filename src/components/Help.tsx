@@ -15,8 +15,9 @@ export function referenceAnswer(
   const q = question.toLowerCase();
   const { word, phrase } = context;
   if (phrase) {
-    if (/пример|контекст|предложен/.test(q) && phrase.quote)
-      return `“${phrase.quote.text}”\n${phrase.quote.translation}\n\n${[phrase.quote.title, phrase.quote.author, phrase.quote.location].filter(Boolean).join(" · ")}${phrase.quote.note ? `\n\n${phrase.quote.note}` : ""}\n\nПолный текст можно открыть по ссылке в справке выражения.`;
+    const quote = phrase.quote || phrase.bookQuotes?.[0];
+    if (/пример|контекст|предложен/.test(q) && quote)
+      return `“${quote.text}”\n${quote.translationKind === "summary" ? "Коротко по-русски: " : ""}${quote.translation}\n\n${[quote.title, quote.author, quote.location].filter(Boolean).join(" · ")}${quote.note ? `\n\n${quote.note}` : ""}\n\nПолный текст можно открыть по ссылке в справке выражения.`;
     if (
       preferAi &&
       phrase.dictionary &&
@@ -30,7 +31,7 @@ export function referenceAnswer(
       return `${phrase.origin}\n\nИсточник значения: ${phrase.source.label}. Ссылка доступна в раскрывающейся справке выражения.`;
     if (/пример|контекст|предложен/.test(q))
       return phrase.example
-        ? `${phrase.example}\n${phrase.exampleRu}\n\n${phrase.dictionary ? "Это пример из WordNet." : "Это учебный пример, не цитата."}${phrase.quote ? `\n\nПример из литературы:\n“${phrase.quote.text}”\n${phrase.quote.translation}\n${phrase.quote.author}` : ""}`
+        ? `${phrase.example}\n${phrase.exampleRu}\n\n${phrase.dictionary ? "Это пример из WordNet." : "Это учебный пример, не цитата."}`
         : null;
     if (
       /знач|перев|употреб|примен|объясн|использ|когда .*говор|где .*говор/.test(

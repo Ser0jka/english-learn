@@ -1069,6 +1069,14 @@ export default function App() {
             >
               Источники и лицензии
             </a>
+            <a
+              className="text-button"
+              href="/data/books/credits.txt"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Источники книг
+            </a>
             <button
               className="button primary full"
               onClick={() => setSettings(false)}

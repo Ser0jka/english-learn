@@ -1,5 +1,8 @@
 import GeneratedWords from "./GeneratedWords";
 import WordPicker from "./WordPicker";
+import BookContexts from "./BookContexts";
+import BookLibrary from "./BookLibrary";
+import { contextSignature } from "../bookLibrary";
 import { PHRASE_BANK } from "../phraseBank";
 import { useWordLibrary } from "../useLibrary";
 import LibraryNotice from "./LibraryNotice";
@@ -576,7 +579,15 @@ export function Flashcards({
     </div>
   );
 }
-function PhraseDetails({ phrase }: { phrase: Phrase }) {
+function PhraseDetails({
+  phrase,
+  store,
+  setStore,
+  available,
+}: Pick<StudyProps, "store" | "setStore"> & {
+  phrase: Phrase;
+  available: boolean;
+}) {
   return (
     <div className="phrase-details" id={`details-${phrase.id}`}>
       {phrase.generated && (
@@ -630,48 +641,12 @@ function PhraseDetails({ phrase }: { phrase: Phrase }) {
           {phrase.exampleRu && <span>{phrase.exampleRu}</span>}
         </div>
       ) : null}
-      {phrase.quote && (
-        <figure className="source-quote">
-          <span className="eyebrow">
-            {phrase.quote.kind === "article"
-              ? "ИЗ СТАТЬИ"
-              : phrase.quote.kind === "speech"
-                ? "ИЗ ВЫСТУПЛЕНИЯ"
-                : phrase.quote.kind === "play"
-                  ? "ИЗ ПЬЕСЫ"
-                  : "ИЗ КНИГИ"}
-          </span>
-          <blockquote lang="en">
-            <a
-              className="context-excerpt"
-              href={phrase.quote.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Прочитать «${phrase.quote.title || "источник отрывка"}» (новая вкладка)`}
-            >
-              “{phrase.quote.text}”
-            </a>
-          </blockquote>
-          <p>{phrase.quote.translation}</p>
-          <figcaption>
-            {phrase.quote.title && <cite>{phrase.quote.title}</cite>}
-            <p className="context-attribution">
-              {phrase.quote.author}
-              {phrase.quote.location && ` · ${phrase.quote.location}`}
-            </p>
-            {phrase.quote.note && <p>{phrase.quote.note}</p>}
-            <a
-              className="context-full-text"
-              href={phrase.quote.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Читать полный текст: ${phrase.quote.title || phrase.quote.author}, ${phrase.quote.author} (новая вкладка)`}
-            >
-              Читать полный текст <ExternalLink size={15} aria-hidden="true" />
-            </a>
-          </figcaption>
-        </figure>
-      )}
+      <BookContexts
+        phrase={phrase}
+        store={store}
+        setStore={setStore}
+        available={available}
+      />
       <a
         className="source-link"
         href={phrase.source.url}
@@ -705,12 +680,18 @@ export function Phrases({
   const phraseLibrary = useWordLibrary("phrases");
   const [visible, setVisible] = useState(24);
   const allPhrases = useMemo(
-    () => [
-      ...PHRASES,
-      ...(phraseLibrary.status === "ready" ? PHRASE_BANK : []),
-      ...store.customPhrases,
-    ],
-    [store.customPhrases, phraseLibrary.status],
+    () =>
+      [
+        ...PHRASES,
+        ...(phraseLibrary.status === "ready" ? PHRASE_BANK : []),
+        ...store.customPhrases,
+      ].map((phrase) => {
+        const cached = store.bookContexts?.[phrase.id];
+        return cached?.signature === contextSignature(phrase)
+          ? { ...phrase, bookQuotes: cached.quotes }
+          : phrase;
+      }),
+    [store.customPhrases, store.bookContexts, phraseLibrary.status],
   );
   const personalWords = useMemo(() => {
     const seen = new Set<string>();
@@ -855,6 +836,7 @@ export function Phrases({
   }
   return (
     <>
+      <BookLibrary />
       <div className="phrase-search panel">
         <div className="search-field">
           <Search size={20} />
@@ -1024,7 +1006,12 @@ export function Phrases({
             </div>
             {open === p.id && (
               <>
-                <PhraseDetails phrase={p} />
+                <PhraseDetails
+                  phrase={p}
+                  store={store}
+                  setStore={setStore}
+                  available={available}
+                />
                 <div className="phrase-bottom">
                   <button
                     className="text-button"

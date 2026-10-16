@@ -40,6 +40,7 @@ const dataHashes = await Promise.all(
 );
 const dataVersion = createHash("sha256")
   .update(dataHashes.join(":"))
+  .update(await readFile(path.join(root, "data/books/manifest.json")))
   .digest("hex")
   .slice(0, 16);
 const source = await readFile(

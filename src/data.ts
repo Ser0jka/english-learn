@@ -36,11 +36,15 @@ export interface PhraseQuote {
   text: string;
   translation: string;
   author: string;
+  translationKind?: "summary";
   url: string;
   kind?: "book" | "article" | "play" | "speech";
   title?: string;
   location?: string;
   note?: string;
+  bookId?: string;
+  paragraph?: number;
+  match?: string;
 }
 export interface Phrase {
   bankId?: string;
@@ -60,6 +64,8 @@ export interface Phrase {
   exampleRu: string;
   source: { label: string; url: string };
   quote?: PhraseQuote;
+  bookQuotes?: PhraseQuote[];
+  contextStatus?: "found" | "not-found" | "unavailable";
 }
 const entries: Array<
   [

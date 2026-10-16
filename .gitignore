@@ -8,3 +8,4 @@ test-results/
 lexi-personal*.zip
 
 __pycache__/
+.book-corpus-cache/

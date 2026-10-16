@@ -1,0 +1,25 @@
+{
+  "checkedOn": "2026-10-17",
+  "provider": "Groq",
+  "httpStatus": 200,
+  "generatedExpressions": 5,
+  "verifiedQuotes": [
+    {
+      "phrase": "look after",
+      "meaning": "заботиться (присматривать) за",
+      "book": "Anne of Green Gables",
+      "bookId": "45",
+      "paragraph": 314,
+      "verbatim": true
+    },
+    {
+      "phrase": "look around",
+      "meaning": "осмотреться, погулять",
+      "book": "The Secret Garden",
+      "bookId": "113",
+      "paragraph": 354,
+      "verbatim": true
+    }
+  ],
+  "scope": "Verbatim text and source metadata checked against shipped corpus; Russian summaries and sense selection are automated, not editorial translations."
+}

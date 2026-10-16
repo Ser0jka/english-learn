@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env.local server.mjs --dev",
     "build": "npm run typecheck && vite build && node scripts/build-pwa.mjs",
+    "build:books": "python3 scripts/build-book-corpus.py",
     "start": "node --env-file-if-exists=.env.local server.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
