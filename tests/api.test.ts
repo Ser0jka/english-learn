@@ -486,6 +486,107 @@ describe("provider capabilities", () => {
 });
 
 describe("generated content integrity", () => {
+  const complete = {
+    text: "complete a task",
+    translation: "выполнить задачу",
+    usage: "О завершении работы.",
+    example: "We need to complete a task today.",
+    exampleRu: "Нам нужно выполнить задачу сегодня.",
+  };
+  it("keeps valid rows from a partial response and accepts omitted optional exceptions", async () => {
+    mockCompletion({ phrases: [complete, { text: "broken" }] });
+    const response = await post("/api/materials/phrases", { word: "complete" });
+    expect(response.status).toBe(200);
+    const { phrases } = await response.json();
+    expect(phrases).toHaveLength(1);
+    expect(phrases[0].exceptions).toBe("");
+  });
+  it("retries one invalid response and reuses the successful result for an identical request", async () => {
+    const mock = mockCompletion({ phrases: [complete] });
+    mock.mockResolvedValueOnce(completionResponse("invalid structured result"));
+    const first = await post("/api/materials/phrases", { word: "complete" });
+    expect(first.status).toBe(200);
+    const data = await first.json();
+    const calls = mock.mock.calls.length;
+    expect(calls).toBeGreaterThanOrEqual(2);
+    const second = await post("/api/materials/phrases", { word: "complete" });
+    expect(await second.json()).toEqual(data);
+    expect(mock).toHaveBeenCalledTimes(calls);
+  });
+  it("excludes previously displayed expressions and bounds the exclusion list", async () => {
+    const mock = mockCompletion({ phrases: [complete] });
+    const invalid = await post("/api/materials/phrases", {
+      word: "complete",
+      exclude: Array(101).fill("complete a task"),
+    });
+    expect(invalid.status).toBe(400);
+    expect(mock).not.toHaveBeenCalled();
+    const response = await post("/api/materials/phrases", {
+      word: "complete",
+      exclude: ["complete a task"],
+    });
+    expect(await response.json()).toEqual({ phrases: [] });
+    const request = JSON.parse(String(mock.mock.calls[0][1]?.body));
+    expect(request.messages[1].content).toContain("от 8 до 12");
+    expect(request.max_tokens).toBe(6500);
+    expect(request.messages[1].content).toContain('"complete a task"');
+  });
+  it("prepares examples for one particular meaning and rejects unrelated sentences", async () => {
+    const mock = mockCompletion({
+      examples: [
+        {
+          text: "We complete a task together.",
+          translation: "Мы вместе выполняем задачу.",
+        },
+        {
+          text: "This is an unrelated sentence.",
+          translation: "Предложение не по теме.",
+        },
+      ],
+    });
+    const response = await post("/api/materials/phrase-examples", {
+      text: "complete a task",
+      translation: "выполнить задачу",
+      definition: "Finish a piece of work.",
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).examples).toHaveLength(1);
+    expect(
+      JSON.parse(String(mock.mock.calls[0][1]?.body)).messages[1].content,
+    ).toContain('"выполнить задачу"');
+    const invalid = await post("/api/materials/phrase-examples", {
+      text: "x",
+      translation: {},
+    });
+    expect(invalid.status).toBe(400);
+  });
+  it("keeps multiple valid examples and ignores invented attribution metadata", async () => {
+    mockCompletion({
+      phrases: [
+        {
+          ...complete,
+          examples: [
+            {
+              text: "We complete a task before lunch.",
+              translation: "Мы выполняем задачу до обеда.",
+              author: "Invented Author",
+            },
+            {
+              text: "I can complete a task alone.",
+              translation: "Я могу выполнить задачу один.",
+            },
+          ],
+        },
+      ],
+    });
+    const response = await post("/api/materials/phrases", { word: "complete" });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.phrases[0].examples).toHaveLength(3);
+    expect(JSON.stringify(data.phrases[0].examples)).not.toContain(
+      "Invented Author",
+    );
+  });
   it("deduplicates repeated expressions from the provider", async () => {
     const phrase = {
       text: "take your time",
@@ -519,7 +620,7 @@ it("rejects a generated translation that cannot be saved as a vocabulary meaning
   expect((await post("/api/materials/phrases", { word: "safe" })).status).toBe(
     502,
   );
-  expect(mock).toHaveBeenCalledOnce();
+  expect(mock).toHaveBeenCalledTimes(2);
 });
 
 describe("Groq and generated vocabulary", () => {

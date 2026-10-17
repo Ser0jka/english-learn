@@ -46,7 +46,12 @@ export interface PhraseQuote {
   paragraph?: number;
   match?: string;
 }
+export interface PhraseExample {
+  text: string;
+  translation: string;
+}
 export interface Phrase {
+  examples?: PhraseExample[];
   bankId?: string;
   dictionary?: boolean;
   definition?: string;

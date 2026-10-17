@@ -1,4 +1,6 @@
 import GeneratedWords from "./GeneratedWords";
+import PhraseExamples from "./PhraseExamples";
+import { STARTER_PHRASES } from "../starterPhrases";
 import WordPicker from "./WordPicker";
 import BookContexts from "./BookContexts";
 import BookLibrary from "./BookLibrary";
@@ -10,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   canFindExpressions,
   englishQuery,
+  freshPhraseSearch,
   expressionMeanings,
   phraseMatchesQuery,
 } from "../phraseSearch";
@@ -623,7 +626,7 @@ function PhraseDetails({
           </div>
         </div>
       )}
-      {!phrase.dictionary && (
+      {!phrase.dictionary && !phrase.id.startsWith("starter-") && (
         <div className="detail-block">
           <span className="detail-icon">
             <History size={17} />
@@ -634,19 +637,12 @@ function PhraseDetails({
           </div>
         </div>
       )}
-      {phrase.example ? (
-        <div className="phrase-example">
-          <span className="eyebrow">
-            {phrase.dictionary
-              ? "СЛОВАРНЫЙ ПРИМЕР"
-              : phrase.generated
-                ? "УЧЕБНЫЙ ПРИМЕР ПОМОЩНИКА"
-                : "УЧЕБНЫЙ ПРИМЕР"}
-          </span>
-          <p lang="en">“{phrase.example}”</p>
-          {phrase.exampleRu && <span>{phrase.exampleRu}</span>}
-        </div>
-      ) : null}
+      <PhraseExamples
+        phrase={phrase}
+        store={store}
+        setStore={setStore}
+        available={available}
+      />
       <BookContexts
         phrase={phrase}
         store={store}
@@ -675,6 +671,7 @@ export function Phrases({
   initialWord,
 }: StudyProps & { initialWord?: Word | null }) {
   const [query, setQuery] = useState(initialWord?.word || "");
+  const liveQuery = useRef(query);
   const [selectedWord, setSelectedWord] = useState(initialWord || null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const connection = useServiceStatus();
@@ -692,6 +689,7 @@ export function Phrases({
     () =>
       [
         ...PHRASES,
+        ...STARTER_PHRASES,
         ...(phraseLibrary.status === "ready" ? PHRASE_BANK : []),
         ...store.customPhrases,
       ].map((phrase) => {
@@ -715,6 +713,7 @@ export function Phrases({
       .slice(0, 6);
   }, [store.words]);
   function search(value: string, word: Word | null = null, resetSaved = true) {
+    liveQuery.current = value;
     request.current?.abort();
     request.current = null;
     setGenerating(false);
@@ -740,6 +739,17 @@ export function Phrases({
         "phrases",
         {
           word: englishQuery(query),
+          ...(allPhrases.some((phrase) => phraseMatchesQuery(phrase, query))
+            ? {
+                exclude: [
+                  ...new Set(
+                    allPhrases
+                      .filter((phrase) => phraseMatchesQuery(phrase, query))
+                      .map((phrase) => phrase.text),
+                  ),
+                ].slice(0, 100),
+              }
+            : {}),
           ...(selectedWord ? { translation: selectedWord.translation } : {}),
         },
         controller.signal,
@@ -759,6 +769,12 @@ export function Phrases({
       );
       setStore((s) => ({
         ...s,
+        phraseSearches: Object.fromEntries([
+          ...Object.entries(s.phraseSearches || {})
+            .filter(([key]) => key !== requestKey)
+            .slice(-999),
+          [requestKey, { at: Date.now() }],
+        ]),
         customPhrases: [
           ...s.customPhrases,
           ...fresh.filter(
@@ -820,14 +836,17 @@ export function Phrases({
       generating ||
       composing ||
       phraseLibrary.status === "loading" ||
-      matchingCount > 0 ||
+      matchingCount >= 12 ||
+      (matchingCount > 0 && englishQuery(query).includes(" ")) ||
+      freshPhraseSearch(store.phraseSearches?.[requestKey]?.at) ||
       englishQuery(query).length < 2 ||
       !canFindExpressions(query) ||
       attempted.current.has(requestKey)
     )
       return;
     const timer = window.setTimeout(() => {
-      if (!composing) void findMore();
+      if (!composing && englishQuery(liveQuery.current) === englishQuery(query))
+        void findMore();
     }, 900);
     return () => window.clearTimeout(timer);
   }, [
@@ -836,6 +855,7 @@ export function Phrases({
     generating,
     phraseLibrary.status,
     matchingCount,
+    store.phraseSearches,
     query,
     requestKey,
     findMore,
@@ -875,8 +895,14 @@ export function Phrases({
                 ...word,
                 id: `phrase-${p.id}`,
                 concept,
-                example: p.example,
-                exampleRu: p.exampleRu,
+                example:
+                  s.phraseExamples?.[p.id]?.signature === contextSignature(p)
+                    ? s.phraseExamples[p.id].examples[0].text
+                    : p.example,
+                exampleRu:
+                  s.phraseExamples?.[p.id]?.signature === contextSignature(p)
+                    ? s.phraseExamples[p.id].examples[0].translation
+                    : p.exampleRu,
                 definition: word.bankId ? word.definition : p.usage,
               },
             ]).words.map((w) =>
@@ -900,8 +926,15 @@ export function Phrases({
           event.preventDefault();
           if (composing) return;
           setOnlySaved(false);
-          if (!matchingCount) void findMore();
-          else {
+          if (
+            !matchingCount ||
+            (matchingCount < 12 &&
+              available &&
+              !attempted.current.has(requestKey) &&
+              !freshPhraseSearch(store.phraseSearches?.[requestKey]?.at))
+          )
+            void findMore();
+          if (matchingCount) {
             results.current?.focus({ preventScroll: true });
             results.current?.scrollIntoView({
               block: "start",
@@ -1010,7 +1043,7 @@ export function Phrases({
         {!query.trim() && (
           <span>
             {available
-              ? "Готовые выражения появятся сразу. Если совпадений нет, помощник подберёт новые."
+              ? "Готовые выражения появятся сразу. Короткую подборку помощник дополнит новыми."
               : "Ищите выражения в готовой подборке. Помощник сейчас недоступен."}
           </span>
         )}
@@ -1053,8 +1086,21 @@ export function Phrases({
         </div>
       )}
       {generationError && (
-        <div className="form-error" role="alert">
-          <p>{generationError}</p>
+        <div
+          className={matchingCount ? "phrase-topup-error panel" : "form-error"}
+          role="alert"
+        >
+          <p>
+            {matchingCount
+              ? "Не удалось пополнить подборку. Найденные выражения и примеры доступны."
+              : generationError}
+          </p>
+          {matchingCount > 0 && (
+            <details>
+              <summary>Причина</summary>
+              <p>{generationError}</p>
+            </details>
+          )}
           <button
             className="button secondary"
             disabled={generating}

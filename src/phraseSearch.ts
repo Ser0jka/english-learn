@@ -5,6 +5,12 @@ import { findBankMeanings } from "./wordBank";
 export function englishQuery(value: string): string {
   return normalize(value).replace(/[\u2010-\u2015\u2212]/g, "-");
 }
+export function freshPhraseSearch(
+  at: number | undefined,
+  now = Date.now(),
+): boolean {
+  return typeof at === "number" && at <= now + 60000 && at > now - 6 * 3600000;
+}
 
 export function canFindExpressions(value: string): boolean {
   const query = englishQuery(value);

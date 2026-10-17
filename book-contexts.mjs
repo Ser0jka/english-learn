@@ -93,6 +93,7 @@ const irregular = [
   ["cut", "cuts", "cutting"],
   ["feel", "feels", "felt", "feeling"],
   ["learn", "learns", "learned", "learnt", "learning"],
+  ["lose", "loses", "lost", "losing"],
 ];
 /** @param {string} word */
 function forms(word) {
@@ -121,6 +122,32 @@ const possessives = new Set([
   "one's",
   "someone's",
 ]);
+/** Whether an example uses the requested expression, with bounded verb forms.
+ * @param {string} phrase @param {string} context */
+export function phraseOccurs(phrase, context) {
+  let target = words(phrase).map((word) => word.value);
+  if (target[0] === "to" && target.length > 2) target = target.slice(1);
+  if (!target.length) return false;
+  const tokens = words(context);
+  const initial = forms(target[0]);
+  return tokens.some(
+    (token, index) =>
+      initial.has(token.value) &&
+      target.slice(1).every((part, offset) => {
+        const previous = tokens[index + offset],
+          next = tokens[index + offset + 1];
+        return (
+          next &&
+          /^[\s\-\u2010-\u2015]+$/.test(
+            context.slice(previous.end, next.start),
+          ) &&
+          (["one's", "someone's"].includes(part)
+            ? possessives.has(next.value)
+            : part === next.value)
+        );
+      }),
+  );
+}
 /** Exact contiguous occurrences, with bounded initial verb inflections.
  * @param {string} phrase @param {number} limit @returns {Promise<BookCandidate[]>} */
 export async function findBookCandidates(phrase, limit = 6) {

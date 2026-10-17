@@ -10,6 +10,7 @@ import {
   type Phrase,
   type Passage,
   type PhraseQuote,
+  type PhraseExample,
 } from "./data";
 import { newId } from "./id";
 import { findBankWord } from "./wordBank";
@@ -31,6 +32,11 @@ export interface Store {
   dailyGoal?: number;
   appearance?: Appearance;
   bookContexts?: Record<string, { signature: string; quotes: PhraseQuote[] }>;
+  phraseExamples?: Record<
+    string,
+    { signature: string; examples: PhraseExample[] }
+  >;
+  phraseSearches?: Record<string, { at: number }>;
 }
 export const STORAGE_KEY = "lexi.workspace.v1";
 export const emptyStore = (): Store => ({
@@ -142,6 +148,23 @@ export function validateStore(value: unknown): Store {
   if (
     !isRecord(value) ||
     value.version !== 1 ||
+    (value.phraseSearches !== undefined &&
+      (!isRecord(value.phraseSearches) ||
+        Object.keys(value.phraseSearches).length > 1000 ||
+        !Object.entries(value.phraseSearches).every(
+          ([key, entry]) =>
+            shortText(key, 1000) && isRecord(entry) && timestamp(entry.at),
+        ))) ||
+    (value.phraseExamples !== undefined &&
+      (!isRecord(value.phraseExamples) ||
+        Object.keys(value.phraseExamples).length > 1000 ||
+        !Object.entries(value.phraseExamples).every(
+          ([key, entry]) =>
+            shortText(key, 200) &&
+            isRecord(entry) &&
+            shortText(entry.signature, 5000) &&
+            validPhraseExamples(entry.examples),
+        ))) ||
     (value.appearance !== undefined && !validAppearance(value.appearance)) ||
     (value.bookContexts !== undefined &&
       (!isRecord(value.bookContexts) ||
@@ -214,6 +237,12 @@ export function validateStore(value: unknown): Store {
     interests: [...new Set(value.interests as Topic[])],
     customPhrases,
     customPassages,
+    ...(value.phraseExamples === undefined
+      ? {}
+      : { phraseExamples: value.phraseExamples as Store["phraseExamples"] }),
+    ...(value.phraseSearches === undefined
+      ? {}
+      : { phraseSearches: value.phraseSearches as Store["phraseSearches"] }),
     ...(value.bookContexts === undefined
       ? {}
       : { bookContexts: value.bookContexts as Store["bookContexts"] }),
@@ -585,6 +614,7 @@ export function validPhrase(p: unknown): p is Phrase {
   return (
     shortText(p.id, 200) &&
     shortText(p.text, 100) &&
+    (p.examples === undefined || validPhraseExamples(p.examples)) &&
     ["translation", "usage", "origin", "frequencyLabel"].every((k) =>
       shortText(p[k], 4000),
     ) &&
@@ -611,6 +641,19 @@ export function validPhrase(p: unknown): p is Phrase {
     (p.contextStatus === undefined ||
       (typeof p.contextStatus === "string" &&
         ["found", "not-found", "unavailable"].includes(p.contextStatus)))
+  );
+}
+export function validPhraseExamples(value: unknown): value is PhraseExample[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 1 &&
+    value.length <= 3 &&
+    value.every(
+      (example) =>
+        isRecord(example) &&
+        shortText(example.text, 1500) &&
+        shortText(example.translation, 1500),
+    )
   );
 }
 export function validPassage(p: unknown): p is Passage {

@@ -246,7 +246,7 @@ test("optional dictionary meanings do not require creating a word", async ({
     .click();
   await expect
     .poll(() => body)
-    .toEqual({ word: "book", translation: "бронировать" });
+    .toMatchObject({ word: "book", translation: "бронировать" });
   expect(
     await page.evaluate(
       (key) => JSON.parse(localStorage.getItem(key)!).words,
@@ -272,6 +272,7 @@ test("waits for completed IME input and debounces edits to the final word", asyn
     page.getByRole("button", { name: "Найти ещё выражения", exact: true }),
   ).toBeEnabled();
   await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.clock.fastForward(3000);
   expect(bodies).toEqual([]);
   await search.dispatchEvent("compositionend");

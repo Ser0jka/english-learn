@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { findBookCandidates } from "./book-contexts.mjs";
+import { findBookCandidates, phraseOccurs } from "./book-contexts.mjs";
 
 // Credentials stay on the server. No endpoint accepts a key or a provider URL.
 export const aiAvailable = () => Boolean(process.env.LEXI_API_KEY);
@@ -37,22 +37,28 @@ function englishText(value) {
     .replace(/[\u2018\u2019\u02bc]/g, "'")
     .trim();
 }
-/** @param {Array<{role: string, content: string}>} messages @param {boolean} json @param {number | undefined} [temperature] @returns {Promise<unknown>} */
-async function completion(messages, json = false, temperature) {
+/** @param {Array<{role: string, content: string}>} messages @param {boolean} json @param {number | undefined} [temperature] @param {number} [maxTokens] @param {number} [timeoutMs] @returns {Promise<unknown>} */
+async function completion(
+  messages,
+  json = false,
+  temperature,
+  maxTokens = json ? 3000 : 700,
+  timeoutMs = 45000,
+) {
   const base = process.env.LEXI_API_BASE || "https://api.openai.com/v1";
   const url = new URL(`${base.replace(/\/$/, "")}/chat/completions`);
   if (url.protocol !== "https:") throw new Error("HTTPS required");
   const response = await fetch(url, {
     method: "POST",
     redirect: "error",
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(timeoutMs),
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.LEXI_API_KEY}`,
     },
     body: JSON.stringify({
       model: process.env.LEXI_MODEL || "gpt-4o-mini",
-      max_tokens: json ? 3000 : 700,
+      max_tokens: maxTokens,
       ...(temperature === undefined ? {} : { temperature }),
       ...(json ? { response_format: { type: "json_object" } } : {}),
       messages,
@@ -61,7 +67,7 @@ async function completion(messages, json = false, temperature) {
   if (!response.ok) throw new Error(`Provider returned ${response.status}`);
   const body = await response.json();
   const answer = body.choices?.[0]?.message?.content;
-  if (!text(answer, 20000)) throw new Error("Invalid completion");
+  if (!text(answer, 50000)) throw new Error("Invalid completion");
   return json ? JSON.parse(answer) : answer;
 }
 
@@ -79,6 +85,12 @@ function generatedPhrase(value) {
     ) &&
     typeof value.exceptions === "string" &&
     value.exceptions.length <= 1500
+  );
+}
+/** @param {unknown} value @returns {value is {text:string,translation:string}} */
+function validExample(value) {
+  return (
+    record(value) && text(value.text, 1500) && text(value.translation, 1500)
   );
 }
 const system =
@@ -212,11 +224,17 @@ export function registerAi(app) {
     for (const [key, entry] of requests)
       if (now - entry.start > 60000) requests.delete(key);
     const entry = requests.get(req.ip || "local") || { start: now, count: 0 };
-    if (entry.count >= 12)
+    const cost = [
+      "/api/materials/contexts",
+      "/api/materials/phrase-examples",
+    ].includes(req.originalUrl.split("?")[0])
+      ? 1
+      : 3;
+    if (entry.count + cost > 36)
       return res
         .status(429)
         .json({ error: "Слишком много запросов. Попробуйте через минуту." });
-    entry.count++;
+    entry.count += cost;
     requests.set(req.ip || "local", entry);
     next();
   });
@@ -344,6 +362,8 @@ export function registerAi(app) {
       });
     }
   });
+  /** @type {Map<string,{at:number,data:unknown}>} */
+  const phraseCache = new Map();
   app.post("/api/materials/phrases", async (req, res) => {
     const input = req.body?.word;
     const word =
@@ -351,6 +371,15 @@ export function registerAi(app) {
         ? englishText(input).replace(/\s+/g, " ").toLowerCase()
         : input;
     const translation = req.body?.translation;
+    const exclude = req.body?.exclude ?? [];
+    if (
+      !Array.isArray(exclude) ||
+      exclude.length > 100 ||
+      !exclude.every((value) => text(value, 100))
+    )
+      return res
+        .status(400)
+        .json({ error: "Слишком большой список уже найденных выражений." });
     if (
       !text(input, 100) ||
       !text(word, 100) ||
@@ -363,25 +392,59 @@ export function registerAi(app) {
       return res
         .status(400)
         .json({ error: "Перевод должен быть текстом до 300 символов." });
+    const cacheKey = JSON.stringify([
+      word,
+      translation || "",
+      [...exclude].sort(),
+    ]);
+    const cached = phraseCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < 3600000)
+      return res.json(cached.data);
     try {
-      const result = await completion(
-        [
-          { role: "system", content: system },
-          {
-            role: "user",
-            content: `Подбери до 5 реально употребляемых устойчивых английских выражений и естественных сочетаний со словом ${JSON.stringify(word)}.${translation ? ` Ученик изучает это слово в значении ${JSON.stringify(translation)}. Учитывай именно это значение, а не другие омонимы.` : " Сам определи распространённые значения английского слова; ученик не обязан вводить перевод. Можно показать выражения с разными значениями слова, но перевод каждого выражения должен быть однозначным."} Не создавай новые идиомы. Выражение должно содержать запрошенное слово или его грамматическую форму; не заменяй его похожим по написанию или связанным по теме словом. Если слово не существует или написание непонятно, верни пустой массив, не угадывай исправление. Для каждого выражения укажи одно конкретное значение, согласованное с его примером; не объединяй разные смыслы в одном переводе. От более частых к менее частым. Если таких нет, верни пустой массив. Формат JSON: {"phrases":[{"text":"English phrase","translation":"перевод","usage":"как, где и с кем применяют на русском","exceptions":"нюансы или исключения, если есть","example":"свой учебный пример EN, не цитата","exampleRu":"его перевод"}]}. Не пиши историю и не приписывай примеры писателям.`,
-          },
-        ],
-        true,
-      );
-      if (
-        !record(result) ||
-        !Array.isArray(result.phrases) ||
-        result.phrases.length > 5 ||
-        !result.phrases.every(generatedPhrase)
-      )
-        throw new Error("Invalid phrases");
-      const phrases = result.phrases.map((p, i) => {
+      /** @type {GeneratedPhrase[]} */
+      let rows = [];
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const result = await completion(
+            [
+              { role: "system", content: system },
+              {
+                role: "user",
+                content: `Подбери от 8 до 12 реально употребляемых устойчивых английских выражений и естественных сочетаний со словом ${JSON.stringify(word)}.${translation ? ` Ученик изучает это слово в значении ${JSON.stringify(translation)}. Учитывай именно это значение, а не другие омонимы.` : " Сам определи распространённые значения английского слова; ученик не обязан вводить перевод. Можно показать выражения с разными значениями слова, но перевод каждого выражения должен быть однозначным."} Не создавай новые идиомы. Выражение должно содержать запрошенное слово или его грамматическую форму; не заменяй его похожим по написанию или связанным по теме словом. Если слово не существует или написание непонятно, верни пустой массив, не угадывай исправление. Для каждого выражения укажи одно конкретное значение, согласованное с его примером; не объединяй разные смыслы в одном переводе. От более частых к менее частым. Если вариантов меньше, верни столько, сколько есть; не выдумывай ради количества. Если таких нет, верни пустой массив. Формат JSON: {"phrases":[{"text":"English phrase","translation":"перевод","usage":"как, где и с кем применяют на русском","exceptions":"нюансы или исключения, если есть","example":"свой учебный пример EN, не цитата","exampleRu":"его перевод","examples":[{"text":"первый естественный пример EN","translation":"перевод"},{"text":"другой пример EN в иной ситуации","translation":"перевод"}]}]}. Не пиши историю и не приписывай примеры писателям. Пиши кратко. Не повторяй уже показанные выражения: ${JSON.stringify(exclude)}.`,
+              },
+            ],
+            true,
+            0.3,
+            6500,
+            35000,
+          );
+          if (
+            !record(result) ||
+            !Array.isArray(result.phrases) ||
+            result.phrases.length > 30
+          )
+            throw new Error("Invalid phrases");
+          rows = result.phrases
+            .map((raw) =>
+              record(raw)
+                ? {
+                    ...raw,
+                    exceptions:
+                      typeof raw.exceptions === "string" ? raw.exceptions : "",
+                  }
+                : raw,
+            )
+            .filter(generatedPhrase)
+            .filter((phrase) => phraseOccurs(phrase.text, phrase.example))
+            .slice(0, 12);
+          if (result.phrases.length && !rows.length)
+            throw new Error("Incomplete phrases");
+          break;
+        } catch (error) {
+          if (attempt === 1) throw error;
+        }
+      }
+      const phrases = rows.map((p, i) => {
         return {
           id: `ai-${randomUUID()}`,
           text: p.text,
@@ -397,17 +460,46 @@ export function registerAi(app) {
           exampleRu: p.exampleRu,
           source: phraseSource(p.text),
           generated: true,
+          examples: [
+            { text: p.example, translation: p.exampleRu },
+            ...("examples" in p && Array.isArray(p.examples)
+              ? p.examples
+                  .filter(validExample)
+                  .filter((example) => phraseOccurs(p.text, example.text))
+                  .map((example) => ({
+                    text: example.text,
+                    translation: example.translation,
+                  }))
+              : []),
+          ]
+            .filter(
+              (example, index, all) =>
+                all.findIndex(
+                  (other) =>
+                    englishText(other.text).toLowerCase() ===
+                    englishText(example.text).toLowerCase(),
+                ) === index,
+            )
+            .slice(0, 3),
         };
       });
-      const seen = new Set();
+      const seen = new Set(
+        exclude.map((value) => englishText(value).toLowerCase()),
+      );
       const unique = phrases.filter((p) => {
         const key = p.text.trim().toLocaleLowerCase("en");
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
-      const contexts = await resolveBookContexts(unique);
-      res.json({
+      const contexts = (
+        await Promise.all(
+          Array.from({ length: Math.ceil(unique.length / 4) }, (_, i) =>
+            resolveBookContexts(unique.slice(i * 4, i * 4 + 4)),
+          ),
+        )
+      ).flat();
+      const data = {
         phrases: unique.map((phrase) => {
           const context = contexts.find((item) => item.id === phrase.id);
           return {
@@ -416,11 +508,57 @@ export function registerAi(app) {
             contextStatus: context?.status || "unavailable",
           };
         }),
-      });
+      };
+      for (const [key, entry] of phraseCache)
+        if (Date.now() - entry.at >= 3600000) phraseCache.delete(key);
+      if (phraseCache.size >= 100)
+        phraseCache.delete(phraseCache.keys().next().value || "");
+      phraseCache.set(cacheKey, { at: Date.now(), data });
+      res.json(data);
     } catch {
       res.status(502).json({
         error:
           "Не удалось подобрать выражения. Попробуйте позже или используйте встроенную подборку.",
+      });
+    }
+  });
+  app.post("/api/materials/phrase-examples", async (req, res) => {
+    const { text: phrase, translation, definition } = req.body || {};
+    if (
+      !text(phrase, 100) ||
+      !text(translation, 300) ||
+      (definition !== undefined && !text(definition, 1500))
+    )
+      return res
+        .status(400)
+        .json({ error: "Укажите выражение и его значение." });
+    try {
+      const result = await completion(
+        [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: `Придумай три коротких естественных учебных примера английского выражения, в разных жизненных ситуациях. Учитывай только указанное значение и определение. Это оригинальные учебные примеры, не цитаты. Не выдумывай источники. JSON: {"examples":[{"text":"English sentence with the expression","translation":"русский перевод"}]}. Выражение: ${JSON.stringify(phrase)}. Значение: ${JSON.stringify(translation)}. Определение: ${JSON.stringify(definition || "")}.`,
+          },
+        ],
+        true,
+        0.3,
+      );
+      if (!record(result) || !Array.isArray(result.examples))
+        throw new Error("Invalid examples");
+      const examples = result.examples
+        .filter(validExample)
+        .filter((example) => phraseOccurs(phrase, example.text))
+        .slice(0, 3)
+        .map((example) => ({
+          text: example.text,
+          translation: example.translation,
+        }));
+      if (!examples.length) throw new Error("Missing examples");
+      res.json({ examples });
+    } catch {
+      res.status(502).json({
+        error: "Не удалось подготовить примеры. Повторите чуть позже.",
       });
     }
   });

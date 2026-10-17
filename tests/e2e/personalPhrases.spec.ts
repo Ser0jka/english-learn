@@ -194,7 +194,7 @@ for (const width of [320, 1440]) {
       .click();
     await expect
       .poll(() => body)
-      .toEqual({ word: "book", translation: "бронировать" });
+      .toMatchObject({ word: "book", translation: "бронировать" });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

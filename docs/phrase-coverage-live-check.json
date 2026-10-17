@@ -1,0 +1,230 @@
+{
+  "checkedAt": "2026-10-17T09:28:33.737Z",
+  "checks": [
+    {
+      "kind": "phrases",
+      "request": {
+        "word": "complete",
+        "exclude": [
+          "complete a task",
+          "complete a course",
+          "complete a form",
+          "complete a project",
+          "a complete stranger",
+          "a complete beginner",
+          "a complete waste of time",
+          "a complete disaster",
+          "a complete set",
+          "complete silence",
+          "complete control",
+          "complete with"
+        ]
+      },
+      "status": 200,
+      "elapsedMs": 9130,
+      "phrases": [
+        {
+          "text": "complete the picture",
+          "translation": "полностью раскрыть ситуацию",
+          "example": "The recent report completes the picture of the company's financial health.",
+          "exampleRu": "Недавний отчёт полностью раскрывает ситуацию с финансовым здоровьем компании.",
+          "examples": [
+            {
+              "text": "Without the eyewitness account, the investigation never completed the picture.",
+              "translation": "Без свидетельского показания расследование никогда не раскрыло бы ситуацию полностью."
+            },
+            {
+              "text": "Her testimony completed the picture, allowing the jury to see the full context.",
+              "translation": "Её показания полностью раскрыли ситуацию, позволив присяжным увидеть весь контекст."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete the circle",
+          "translation": "замкнуть цикл, довести до конца",
+          "example": "After years abroad, returning home completed the circle for her.",
+          "exampleRu": "После многих лет за границей возвращение домой замкнуло для неё цикл.",
+          "examples": [
+            {
+              "text": "Finishing the marathon completed the circle of his training goals.",
+              "translation": "Финиш марафона замкнул цикл его тренировочных целей."
+            },
+            {
+              "text": "The reunion with his old friends completed the circle of his childhood memories.",
+              "translation": "Встреча со старыми друзьями замкнула круг его детских воспоминаний."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete the circuit",
+          "translation": "замкнуть цепь (электрическую)",
+          "example": "Connecting the wire completes the circuit, allowing current to flow.",
+          "exampleRu": "Подключение провода замыкает цепь, позволяя току течь.",
+          "examples": [
+            {
+              "text": "When the switch is flipped, it completes the circuit and the lamp lights up.",
+              "translation": "Когда переключатель включён, он замыкает цепь, и лампа загорается."
+            },
+            {
+              "text": "The battery must be properly installed to complete the circuit of the device.",
+              "translation": "Батарейку нужно правильно установить, чтобы замкнуть цепь устройства."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete the puzzle",
+          "translation": "доделать пазл, собрать картину",
+          "example": "She finally completed the puzzle after three hours.",
+          "exampleRu": "Она наконец собрала пазл после трёх часов.",
+          "examples": [
+            {
+              "text": "The detective's final clue completed the puzzle of the crime.",
+              "translation": "Последняя улика детектива собрала картину преступления."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete the transaction",
+          "translation": "завершить сделку",
+          "example": "The system will complete the transaction once you confirm the payment.",
+          "exampleRu": "Система завершит сделку, как только вы подтвердите оплату.",
+          "examples": [
+            {
+              "text": "After the bank verified the details, it completed the transaction.",
+              "translation": "После проверки данных банком, сделка была завершена."
+            },
+            {
+              "text": "The online store will complete the transaction and send a receipt to your email.",
+              "translation": "Онлайн‑магазин завершит сделку и отправит чек на ваш электронный адрес."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete the process",
+          "translation": "завершить процесс",
+          "example": "Please follow the steps to complete the process.",
+          "exampleRu": "Пожалуйста, следуйте инструкциям, чтобы завершить процесс.",
+          "examples": [
+            {
+              "text": "Submitting the final report will complete the process of accreditation.",
+              "translation": "Отправка окончательного отчёта завершит процесс аккредитации."
+            },
+            {
+              "text": "Once you click 'Save', the system will complete the process automatically.",
+              "translation": "После нажатия «Сохранить» система автоматически завершит процесс."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete the job",
+          "translation": "выполнить работу полностью",
+          "example": "He stayed late to complete the job before the deadline.",
+          "exampleRu": "Он задержался, чтобы полностью выполнить работу до срока.",
+          "examples": [
+            {
+              "text": "She double‑checked the wiring to complete the job correctly.",
+              "translation": "Она дважды проверила проводку, чтобы правильно выполнить работу."
+            },
+            {
+              "text": "The contractor promised to complete the job within two weeks.",
+              "translation": "Подрядчик пообещал полностью выполнить работу в течение двух недель."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete nonsense",
+          "translation": "полный бред",
+          "example": "The article is complete nonsense.",
+          "exampleRu": "Эта статья — полный бред.",
+          "examples": [
+            {
+              "text": "His theory turned out to be complete nonsense when tested.",
+              "translation": "Его теория оказалась полным бредом при проверке."
+            },
+            {
+              "text": "Calling the rumors complete nonsense, she ignored them completely.",
+              "translation": "Назвав слухи полным бредом, она полностью их игнорировала."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete idiot",
+          "translation": "полный идиот",
+          "example": "Only a complete idiot would ignore the warning signs.",
+          "exampleRu": "Только полный идиот будет игнорировать предупреждающие знаки.",
+          "examples": [
+            {
+              "text": "Calling him a complete idiot was harsh but reflected the frustration.",
+              "translation": "Назвать его полным идиотом было жестко, но отражало раздражение."
+            },
+            {
+              "text": "She felt like a complete idiot after sending the email to the wrong person.",
+              "translation": "Она чувствовала себя полным идиотом после того, как отправила письмо не тому человеку."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        },
+        {
+          "text": "complete failure",
+          "translation": "полный провал",
+          "example": "The launch was a complete failure due to technical glitches.",
+          "exampleRu": "Запуск оказался полным провалом из‑за технических сбоев.",
+          "examples": [
+            {
+              "text": "The product launch turned into a complete failure, disappointing investors.",
+              "translation": "Запуск продукта превратился в полный провал, разочаровав инвесторов."
+            },
+            {
+              "text": "His attempt to fix the car was a complete failure; it wouldn't start at all.",
+              "translation": "Его попытка починить машину закончилась полным провалом; она вовсе не заводилась."
+            }
+          ],
+          "contextStatus": "not-found",
+          "bookQuotes": 0
+        }
+      ]
+    },
+    {
+      "kind": "phrase-examples",
+      "request": {
+        "text": "easy chair",
+        "translation": "мягкое кресло",
+        "definition": "An upholstered armchair for lounging."
+      },
+      "status": 200,
+      "elapsedMs": 1304,
+      "examples": [
+        {
+          "text": "She sank into the easy chair with a cup of tea.",
+          "translation": "Она погрузилась в мягкое кресло с чашкой чая."
+        },
+        {
+          "text": "After a long day, he relaxed in his favorite easy chair.",
+          "translation": "После долгого дня он отдохнул в своём любимом мягком кресле."
+        },
+        {
+          "text": "The living room featured a vintage easy chair beside the fireplace.",
+          "translation": "В гостиной стояло винтажное мягкое кресло рядом с камином."
+        }
+      ]
+    }
+  ],
+  "note": "Actual Groq requests. Linguistic correctness is not guaranteed; classroom examples are not attributed quotations."
+}

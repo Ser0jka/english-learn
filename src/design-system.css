@@ -1350,6 +1350,18 @@ legend {
 .phrase-search-progress svg {
   flex-shrink: 0;
 }
+.phrase-topup-error {
+  padding: 16px;
+  margin: 16px 0;
+  color: var(--silver);
+  font-size: 14px;
+}
+.phrase-topup-error details {
+  margin: 8px 0;
+}
+.phrase-examples > .button {
+  margin: 12px 0;
+}
 .phrase-filter-row {
   flex-wrap: wrap;
 }

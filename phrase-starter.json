@@ -1,0 +1,650 @@
+[
+  {
+    "id": "starter-easy-0",
+    "text": "take it easy",
+    "translation": "не перенапрягаться; расслабиться",
+    "keywords": ["easy"],
+    "frequency": 100,
+    "frequencyLabel": "Выражение",
+    "usage": "Дружеский совет отдохнуть или не волноваться.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "You have worked all day. Take it easy tonight.",
+    "exampleRu": "Ты работал весь день. Отдохни сегодня вечером.",
+    "examples": [
+      {
+        "text": "You have worked all day. Take it easy tonight.",
+        "translation": "Ты работал весь день. Отдохни сегодня вечером."
+      },
+      {
+        "text": "Take it easy; we still have plenty of time.",
+        "translation": "Не волнуйся: у нас ещё много времени."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=take%20it%20easy"
+    }
+  },
+  {
+    "id": "starter-easy-1",
+    "text": "easy money",
+    "translation": "лёгкие деньги",
+    "keywords": ["easy"],
+    "frequency": 101,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Деньги, полученные почти без усилий; нередко с оттенком сомнения.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "He thought online trading would be easy money.",
+    "exampleRu": "Он думал, что торговля в интернете принесёт лёгкие деньги.",
+    "examples": [
+      {
+        "text": "He thought online trading would be easy money.",
+        "translation": "Он думал, что торговля в интернете принесёт лёгкие деньги."
+      },
+      {
+        "text": "There is no such thing as easy money in this business.",
+        "translation": "В этом деле лёгких денег не бывает."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20money"
+    }
+  },
+  {
+    "id": "starter-easy-2",
+    "text": "easy does it",
+    "translation": "осторожнее; не спеши",
+    "keywords": ["easy"],
+    "frequency": 102,
+    "frequencyLabel": "Выражение",
+    "usage": "Просят двигаться аккуратно или действовать без спешки.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Easy does it! That box is full of glass.",
+    "exampleRu": "Осторожнее! В этой коробке стекло.",
+    "examples": [
+      {
+        "text": "Easy does it! That box is full of glass.",
+        "translation": "Осторожнее! В этой коробке стекло."
+      },
+      {
+        "text": "Easy does it when you lift the baby.",
+        "translation": "Поднимай малыша осторожно."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20does%20it"
+    }
+  },
+  {
+    "id": "starter-easy-3",
+    "text": "an easy way out",
+    "translation": "лёгкий выход из положения",
+    "keywords": ["easy"],
+    "frequency": 103,
+    "frequencyLabel": "Выражение",
+    "usage": "Способ избежать трудностей; иногда подразумевает уход от ответственности.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Quitting may look like an easy way out.",
+    "exampleRu": "Увольнение может показаться лёгким выходом.",
+    "examples": [
+      {
+        "text": "Quitting may look like an easy way out.",
+        "translation": "Увольнение может показаться лёгким выходом."
+      },
+      {
+        "text": "She refused to take an easy way out and told the truth.",
+        "translation": "Она не стала искать лёгкий выход и сказала правду."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=an%20easy%20way%20out"
+    }
+  },
+  {
+    "id": "starter-easy-4",
+    "text": "easy on the eyes",
+    "translation": "приятный для глаз",
+    "keywords": ["easy"],
+    "frequency": 104,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О приятном внешнем виде или оформлении; о человеке звучит разговорно.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The soft colours are easy on the eyes.",
+    "exampleRu": "Мягкие цвета приятны для глаз.",
+    "examples": [
+      {
+        "text": "The soft colours are easy on the eyes.",
+        "translation": "Мягкие цвета приятны для глаз."
+      },
+      {
+        "text": "This larger font is easy on the eyes.",
+        "translation": "Этот более крупный шрифт удобно читать."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20on%20the%20eyes"
+    }
+  },
+  {
+    "id": "starter-easy-5",
+    "text": "easy to use",
+    "translation": "простой в использовании",
+    "keywords": ["easy"],
+    "frequency": 105,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О понятных инструментах, приложениях и устройствах.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The new app is easy to use.",
+    "exampleRu": "Новым приложением легко пользоваться.",
+    "examples": [
+      {
+        "text": "The new app is easy to use.",
+        "translation": "Новым приложением легко пользоваться."
+      },
+      {
+        "text": "Choose a camera that is easy to use.",
+        "translation": "Выберите камеру, которой просто пользоваться."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20to%20use"
+    }
+  },
+  {
+    "id": "starter-easy-6",
+    "text": "easy to understand",
+    "translation": "легко понять",
+    "keywords": ["easy"],
+    "frequency": 106,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О ясных объяснениях, инструкциях и идеях.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Her explanation was easy to understand.",
+    "exampleRu": "Её объяснение было легко понять.",
+    "examples": [
+      {
+        "text": "Her explanation was easy to understand.",
+        "translation": "Её объяснение было легко понять."
+      },
+      {
+        "text": "The instructions are easy to understand.",
+        "translation": "Инструкции понятны."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20to%20understand"
+    }
+  },
+  {
+    "id": "starter-easy-7",
+    "text": "easy to forget",
+    "translation": "легко забыть",
+    "keywords": ["easy"],
+    "frequency": 107,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О том, что быстро забывается или остаётся без внимания.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Small details are easy to forget.",
+    "exampleRu": "Мелкие детали легко забыть.",
+    "examples": [
+      {
+        "text": "Small details are easy to forget.",
+        "translation": "Мелкие детали легко забыть."
+      },
+      {
+        "text": "It is easy to forget how much progress you have made.",
+        "translation": "Легко забыть, какого большого прогресса ты достиг."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20to%20forget"
+    }
+  },
+  {
+    "id": "starter-easy-8",
+    "text": "easy access",
+    "translation": "удобный доступ",
+    "keywords": ["easy"],
+    "frequency": 108,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "В описании расположения, зданий и сервисов.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The hotel offers easy access to the beach.",
+    "exampleRu": "Из отеля удобно добираться до пляжа.",
+    "examples": [
+      {
+        "text": "The hotel offers easy access to the beach.",
+        "translation": "Из отеля удобно добираться до пляжа."
+      },
+      {
+        "text": "Keep your notes here for easy access.",
+        "translation": "Держите записи здесь, чтобы быстро к ним обращаться."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy%20access"
+    }
+  },
+  {
+    "id": "starter-easy-9",
+    "text": "easy-going",
+    "translation": "спокойный и покладистый",
+    "keywords": ["easy"],
+    "frequency": 109,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О человеке, который обычно не раздражается по мелочам.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "My new neighbour is friendly and easy-going.",
+    "exampleRu": "Мой новый сосед дружелюбный и покладистый.",
+    "examples": [
+      {
+        "text": "My new neighbour is friendly and easy-going.",
+        "translation": "Мой новый сосед дружелюбный и покладистый."
+      },
+      {
+        "text": "We need an easy-going person for this team.",
+        "translation": "В эту команду нам нужен спокойный и покладистый человек."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easy-going"
+    }
+  },
+  {
+    "id": "starter-easy-10",
+    "text": "go easy on",
+    "translation": "не быть слишком строгим с кем-либо",
+    "keywords": ["easy"],
+    "frequency": 110,
+    "frequencyLabel": "Выражение",
+    "usage": "Дружеская просьба относиться к человеку мягче.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Go easy on him; it is his first day.",
+    "exampleRu": "Не будь к нему слишком строг: у него первый день.",
+    "examples": [
+      {
+        "text": "Go easy on him; it is his first day.",
+        "translation": "Не будь к нему слишком строг: у него первый день."
+      },
+      {
+        "text": "Please go easy on the new students.",
+        "translation": "Пожалуйста, не будьте слишком строги с новыми учениками."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=go%20easy%20on"
+    }
+  },
+  {
+    "id": "starter-easy-11",
+    "text": "easier said than done",
+    "translation": "легче сказать, чем сделать",
+    "keywords": ["easy"],
+    "frequency": 111,
+    "frequencyLabel": "Выражение",
+    "usage": "Ответ на совет, который трудно выполнить на практике; сравнительная форма easy.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Just relax? That is easier said than done.",
+    "exampleRu": "Просто расслабиться? Легче сказать, чем сделать.",
+    "examples": [
+      {
+        "text": "Just relax? That is easier said than done.",
+        "translation": "Просто расслабиться? Легче сказать, чем сделать."
+      },
+      {
+        "text": "Saving half your salary is easier said than done.",
+        "translation": "Откладывать половину зарплаты легче на словах, чем на деле."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=easier%20said%20than%20done"
+    }
+  },
+  {
+    "id": "starter-complete-12",
+    "text": "complete a task",
+    "translation": "выполнить задачу",
+    "keywords": ["complete"],
+    "frequency": 112,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О доведении работы до конца.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Please complete a task before starting the next one.",
+    "exampleRu": "Пожалуйста, завершайте одну задачу, прежде чем начинать следующую.",
+    "examples": [
+      {
+        "text": "Please complete a task before starting the next one.",
+        "translation": "Пожалуйста, завершайте одну задачу, прежде чем начинать следующую."
+      },
+      {
+        "text": "We need more time to complete a task of this size.",
+        "translation": "Нам нужно больше времени, чтобы выполнить задачу такого масштаба."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20a%20task"
+    }
+  },
+  {
+    "id": "starter-complete-13",
+    "text": "complete a course",
+    "translation": "пройти курс до конца",
+    "keywords": ["complete"],
+    "frequency": 113,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Об окончании учебной программы.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "You can complete a course at your own pace.",
+    "exampleRu": "Можно пройти курс в своём темпе.",
+    "examples": [
+      {
+        "text": "You can complete a course at your own pace.",
+        "translation": "Можно пройти курс в своём темпе."
+      },
+      {
+        "text": "She hopes to complete a course in photography this summer.",
+        "translation": "Она надеется этим летом пройти курс фотографии."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20a%20course"
+    }
+  },
+  {
+    "id": "starter-complete-14",
+    "text": "complete a form",
+    "translation": "заполнить анкету или бланк",
+    "keywords": ["complete"],
+    "frequency": 114,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Нейтральное или официальное употребление; также говорят fill in/out a form.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Please complete a form at the reception desk.",
+    "exampleRu": "Пожалуйста, заполните бланк на стойке регистрации.",
+    "examples": [
+      {
+        "text": "Please complete a form at the reception desk.",
+        "translation": "Пожалуйста, заполните бланк на стойке регистрации."
+      },
+      {
+        "text": "You must complete a form before the appointment.",
+        "translation": "Перед приёмом нужно заполнить анкету."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20a%20form"
+    }
+  },
+  {
+    "id": "starter-complete-15",
+    "text": "complete a project",
+    "translation": "завершить проект",
+    "keywords": ["complete"],
+    "frequency": 115,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О достижении результата проекта, часто в рабочем контексте.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "We plan to complete a project by Friday.",
+    "exampleRu": "Мы планируем завершить проект к пятнице.",
+    "examples": [
+      {
+        "text": "We plan to complete a project by Friday.",
+        "translation": "Мы планируем завершить проект к пятнице."
+      },
+      {
+        "text": "It takes a good team to complete a project on time.",
+        "translation": "Чтобы завершить проект вовремя, нужна хорошая команда."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20a%20project"
+    }
+  },
+  {
+    "id": "starter-complete-16",
+    "text": "a complete stranger",
+    "translation": "совершенно незнакомый человек",
+    "keywords": ["complete"],
+    "frequency": 116,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Подчёркивает, что вы совсем не знаете человека.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "A complete stranger helped me find the station.",
+    "exampleRu": "Совершенно незнакомый человек помог мне найти вокзал.",
+    "examples": [
+      {
+        "text": "A complete stranger helped me find the station.",
+        "translation": "Совершенно незнакомый человек помог мне найти вокзал."
+      },
+      {
+        "text": "I would not give my address to a complete stranger.",
+        "translation": "Я бы не дал свой адрес совершенно незнакомому человеку."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=a%20complete%20stranger"
+    }
+  },
+  {
+    "id": "starter-complete-17",
+    "text": "a complete beginner",
+    "translation": "абсолютный новичок",
+    "keywords": ["complete"],
+    "frequency": 117,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О человеке без опыта в занятии или навыке.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "This class is suitable for a complete beginner.",
+    "exampleRu": "Это занятие подходит абсолютному новичку.",
+    "examples": [
+      {
+        "text": "This class is suitable for a complete beginner.",
+        "translation": "Это занятие подходит абсолютному новичку."
+      },
+      {
+        "text": "As a complete beginner, I started with simple exercises.",
+        "translation": "Будучи абсолютным новичком, я начал с простых упражнений."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=a%20complete%20beginner"
+    }
+  },
+  {
+    "id": "starter-complete-18",
+    "text": "a complete waste of time",
+    "translation": "совершенно пустая трата времени",
+    "keywords": ["complete"],
+    "frequency": 118,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Сильная отрицательная оценка бесполезного занятия.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "Waiting for an answer all day was a complete waste of time.",
+    "exampleRu": "Ждать ответа весь день было совершенно пустой тратой времени.",
+    "examples": [
+      {
+        "text": "Waiting for an answer all day was a complete waste of time.",
+        "translation": "Ждать ответа весь день было совершенно пустой тратой времени."
+      },
+      {
+        "text": "He thought the meeting was a complete waste of time.",
+        "translation": "Он считал эту встречу совершенно пустой тратой времени."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=a%20complete%20waste%20of%20time"
+    }
+  },
+  {
+    "id": "starter-complete-19",
+    "text": "a complete disaster",
+    "translation": "полная катастрофа; полный провал",
+    "keywords": ["complete"],
+    "frequency": 119,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "О настоящем бедствии или, разговорно, очень неудачном событии.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The outdoor concert was a complete disaster because of the storm.",
+    "exampleRu": "Из-за бури концерт под открытым небом обернулся полным провалом.",
+    "examples": [
+      {
+        "text": "The outdoor concert was a complete disaster because of the storm.",
+        "translation": "Из-за бури концерт под открытым небом обернулся полным провалом."
+      },
+      {
+        "text": "My first attempt at baking bread was a complete disaster.",
+        "translation": "Моя первая попытка испечь хлеб закончилась полным провалом."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=a%20complete%20disaster"
+    }
+  },
+  {
+    "id": "starter-complete-20",
+    "text": "a complete set",
+    "translation": "полный комплект",
+    "keywords": ["complete"],
+    "frequency": 120,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Все предметы определённой коллекции или набора.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The museum owns a complete set of these prints.",
+    "exampleRu": "У музея есть полный комплект этих гравюр.",
+    "examples": [
+      {
+        "text": "The museum owns a complete set of these prints.",
+        "translation": "У музея есть полный комплект этих гравюр."
+      },
+      {
+        "text": "You will receive a complete set of instructions.",
+        "translation": "Вы получите полный набор инструкций."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=a%20complete%20set"
+    }
+  },
+  {
+    "id": "starter-complete-21",
+    "text": "complete silence",
+    "translation": "полная тишина",
+    "keywords": ["complete"],
+    "frequency": 121,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Отсутствие звуков или ответной реакции.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The audience listened in complete silence.",
+    "exampleRu": "Публика слушала в полной тишине.",
+    "examples": [
+      {
+        "text": "The audience listened in complete silence.",
+        "translation": "Публика слушала в полной тишине."
+      },
+      {
+        "text": "His question was met with complete silence.",
+        "translation": "В ответ на его вопрос наступила полная тишина."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20silence"
+    }
+  },
+  {
+    "id": "starter-complete-22",
+    "text": "complete control",
+    "translation": "полный контроль",
+    "keywords": ["complete"],
+    "frequency": 122,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Подчёркивает отсутствие ограничений контроля в описываемой ситуации.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "The pilot remained in complete control of the aircraft.",
+    "exampleRu": "Пилот сохранял полный контроль над самолётом.",
+    "examples": [
+      {
+        "text": "The pilot remained in complete control of the aircraft.",
+        "translation": "Пилот сохранял полный контроль над самолётом."
+      },
+      {
+        "text": "She wants complete control over her schedule.",
+        "translation": "Она хочет полностью распоряжаться своим расписанием."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20control"
+    }
+  },
+  {
+    "id": "starter-complete-23",
+    "text": "complete with",
+    "translation": "вместе с; в комплекте с",
+    "keywords": ["complete"],
+    "frequency": 123,
+    "frequencyLabel": "Полезное сочетание",
+    "usage": "Указывает на сопутствующие детали или оснащение.",
+    "exceptions": "",
+    "origin": "Подтверждённая история происхождения не добавлена.",
+    "example": "They rented a cottage, complete with a small garden.",
+    "exampleRu": "Они сняли коттедж с небольшим садом.",
+    "examples": [
+      {
+        "text": "They rented a cottage, complete with a small garden.",
+        "translation": "Они сняли коттедж с небольшим садом."
+      },
+      {
+        "text": "The room comes complete with a desk and a lamp.",
+        "translation": "В комнате есть всё необходимое, включая стол и лампу."
+      }
+    ],
+    "source": {
+      "label": "Проверить в Cambridge Dictionary",
+      "url": "https://dictionary.cambridge.org/search/english/direct/?q=complete%20with"
+    }
+  }
+]
