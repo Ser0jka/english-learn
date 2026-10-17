@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-17T07:56:37.170Z",
+  "browser": "Chromium Linux; emulated touch screens, not physical phones",
+  "notes": "Screens use English-only search and persisted translations from the real Groq evidence, replayed as controlled HTTP responses. AI network availability was tested separately.",
+  "checks": [
+    {
+      "viewport": [320, 568],
+      "width": 320,
+      "pageWidth": 320,
+      "outside": [],
+      "resultTop": 99.921875,
+      "errors": []
+    },
+    {
+      "viewport": [393, 852],
+      "width": 393,
+      "pageWidth": 393,
+      "outside": [],
+      "resultTop": 100.34375,
+      "errors": []
+    },
+    {
+      "viewport": [667, 375],
+      "width": 667,
+      "pageWidth": 667,
+      "outside": [],
+      "resultTop": 99.859375,
+      "errors": []
+    },
+    {
+      "viewport": [1440, 900],
+      "width": 1440,
+      "pageWidth": 1440,
+      "outside": [],
+      "resultTop": 99.734375,
+      "errors": []
+    }
+  ]
+}

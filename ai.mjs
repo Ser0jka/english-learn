@@ -74,16 +74,11 @@ function record(value) {
 function generatedPhrase(value) {
   return (
     record(value) &&
-    [
-      "text",
-      "translation",
-      "usage",
-      "exceptions",
-      "example",
-      "exampleRu",
-    ].every((k) =>
+    ["text", "translation", "usage", "example", "exampleRu"].every((k) =>
       text(value[k], k === "text" ? 100 : k === "translation" ? 300 : 1500),
-    )
+    ) &&
+    typeof value.exceptions === "string" &&
+    value.exceptions.length <= 1500
   );
 }
 const system =
@@ -350,9 +345,17 @@ export function registerAi(app) {
     }
   });
   app.post("/api/materials/phrases", async (req, res) => {
-    const word = req.body?.word;
+    const input = req.body?.word;
+    const word =
+      typeof input === "string"
+        ? englishText(input).replace(/\s+/g, " ").toLowerCase()
+        : input;
     const translation = req.body?.translation;
-    if (!text(word, 100) || !/[a-z]/i.test(word))
+    if (
+      !text(input, 100) ||
+      !text(word, 100) ||
+      !/^[a-z]+(?:[ '-][a-z]+)*$/.test(word)
+    )
       return res
         .status(400)
         .json({ error: "Введите английское слово до 100 символов." });
@@ -366,7 +369,7 @@ export function registerAi(app) {
           { role: "system", content: system },
           {
             role: "user",
-            content: `Подбери до 5 реально употребляемых устойчивых английских выражений и естественных сочетаний со словом ${JSON.stringify(word)}.${translation ? ` Ученик изучает это слово в значении ${JSON.stringify(translation)}. Учитывай именно это значение, а не другие омонимы.` : ""} Не создавай новые идиомы. Для каждого выражения укажи одно конкретное значение, согласованное с его примером; не объединяй разные смыслы в одном переводе. От более частых к менее частым. Если таких нет, верни пустой массив. Формат JSON: {"phrases":[{"text":"English phrase","translation":"перевод","usage":"как, где и с кем применяют на русском","exceptions":"нюансы или исключения, если есть","example":"свой учебный пример EN, не цитата","exampleRu":"его перевод"}]}. Не пиши историю и не приписывай примеры писателям.`,
+            content: `Подбери до 5 реально употребляемых устойчивых английских выражений и естественных сочетаний со словом ${JSON.stringify(word)}.${translation ? ` Ученик изучает это слово в значении ${JSON.stringify(translation)}. Учитывай именно это значение, а не другие омонимы.` : " Сам определи распространённые значения английского слова; ученик не обязан вводить перевод. Можно показать выражения с разными значениями слова, но перевод каждого выражения должен быть однозначным."} Не создавай новые идиомы. Выражение должно содержать запрошенное слово или его грамматическую форму; не заменяй его похожим по написанию или связанным по теме словом. Если слово не существует или написание непонятно, верни пустой массив, не угадывай исправление. Для каждого выражения укажи одно конкретное значение, согласованное с его примером; не объединяй разные смыслы в одном переводе. От более частых к менее частым. Если таких нет, верни пустой массив. Формат JSON: {"phrases":[{"text":"English phrase","translation":"перевод","usage":"как, где и с кем применяют на русском","exceptions":"нюансы или исключения, если есть","example":"свой учебный пример EN, не цитата","exampleRu":"его перевод"}]}. Не пиши историю и не приписывай примеры писателям.`,
           },
         ],
         true,

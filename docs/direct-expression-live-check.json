@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-17T07:53:19.068Z",
+  "request": {
+    "word": "resilience"
+  },
+  "httpStatus": 200,
+  "phrases": [
+    {
+      "text": "to build resilience",
+      "translation": "развивать устойчивость (способность быстро восстанавливаться после трудностей)",
+      "exceptions": "Не относится к строительству материалов, здесь смысл – психологическая или организационная устойчивость",
+      "contextStatus": "not-found",
+      "verifiedBookQuotes": 0
+    },
+    {
+      "text": "resilience training",
+      "translation": "тренинг по развитию устойчивости",
+      "exceptions": "",
+      "contextStatus": "not-found",
+      "verifiedBookQuotes": 0
+    },
+    {
+      "text": "show resilience",
+      "translation": "проявлять устойчивость",
+      "exceptions": "Глагол \"show\" здесь означает \"проявлять\", а не буквально \"показывать\"",
+      "contextStatus": "not-found",
+      "verifiedBookQuotes": 0
+    },
+    {
+      "text": "psychological resilience",
+      "translation": "психологическая устойчивость",
+      "exceptions": "",
+      "contextStatus": "not-found",
+      "verifiedBookQuotes": 0
+    },
+    {
+      "text": "the resilience of the supply chain",
+      "translation": "устойчивость цепочки поставок",
+      "exceptions": "",
+      "contextStatus": "not-found",
+      "verifiedBookQuotes": 0
+    }
+  ],
+  "note": "Actual Groq request with English input only, after fixing rejection of empty optional exceptions. The first two attempts before this fix returned HTTP 502. This check does not guarantee linguistic accuracy or future availability."
+}

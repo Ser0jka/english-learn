@@ -137,6 +137,9 @@ export function findBankWord(spelling: string, translation = "") {
         normalized(w.translation) === normalized(translation),
     );
 }
+export function findBankMeanings(spelling: string): Word[] {
+  return [...(bySpelling.get(normalized(spelling)) || [])];
+}
 export function bankEntry(word: Word) {
   const entry = word.bankId
     ? byId.get(entryKey(word.bankId, word.word))

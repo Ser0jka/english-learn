@@ -1306,8 +1306,55 @@ legend {
   padding: 11px 15px;
   min-height: 44px;
 }
+.phrase-search > p {
+  flex-basis: 100%;
+  margin: 0;
+  line-height: 1.6;
+}
+.phrase-personal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 12px 0 20px;
+}
+.phrase-personal-actions > button {
+  min-height: 44px;
+}
+.phrase-meanings {
+  padding: 16px;
+  margin: 16px 0;
+}
+.phrase-meanings summary {
+  cursor: pointer;
+  min-height: 28px;
+}
+.phrase-meanings .filter-chips {
+  flex-wrap: wrap;
+}
+.phrase-meanings .filter-chips button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-height: 44px;
+}
+.phrase-search-progress {
+  padding: 16px;
+  margin: 16px 0;
+}
+.phrase-search-progress p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.phrase-search-progress svg {
+  flex-shrink: 0;
+}
 .phrase-filter-row {
   flex-wrap: wrap;
+}
+.phrase-filter-row + .list-caption {
+  scroll-margin-top: calc(100px + var(--safe-area-top));
 }
 .phrase-filter-row .filter-chips {
   min-width: 0;

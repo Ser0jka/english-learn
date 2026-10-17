@@ -585,9 +585,10 @@ export function validPhrase(p: unknown): p is Phrase {
   return (
     shortText(p.id, 200) &&
     shortText(p.text, 100) &&
-    ["translation", "usage", "exceptions", "origin", "frequencyLabel"].every(
-      (k) => shortText(p[k], 4000),
+    ["translation", "usage", "origin", "frequencyLabel"].every((k) =>
+      shortText(p[k], 4000),
     ) &&
+    shortText(p.exceptions, 4000, true) &&
     ["example", "exampleRu"].every((k) => shortText(p[k], 4000, true)) &&
     (p.definition === undefined || shortText(p.definition, 4000)) &&
     (p.dictionary === undefined || typeof p.dictionary === "boolean") &&

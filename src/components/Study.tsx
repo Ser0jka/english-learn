@@ -6,7 +6,13 @@ import { contextSignature } from "../bookLibrary";
 import { PHRASE_BANK } from "../phraseBank";
 import { useWordLibrary } from "../useLibrary";
 import LibraryNotice from "./LibraryNotice";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  canFindExpressions,
+  englishQuery,
+  expressionMeanings,
+  phraseMatchesQuery,
+} from "../phraseSearch";
 import {
   ArrowRight,
   ArrowLeft,
@@ -606,7 +612,7 @@ function PhraseDetails({
           {phrase.definition && <p lang="en">{phrase.definition}</p>}
         </div>
       </div>
-      {!phrase.dictionary && (
+      {!phrase.dictionary && phrase.exceptions.trim() && (
         <div className="detail-block">
           <span className="detail-icon">
             <Info size={17} />
@@ -676,7 +682,10 @@ export function Phrases({
   const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const request = useRef<AbortController | null>(null);
+  const attempted = useRef(new Set<string>());
+  const [composing, setComposing] = useState(false);
   useEffect(() => () => request.current?.abort(), []);
+  useWordLibrary("words", Boolean(query.trim()));
   const phraseLibrary = useWordLibrary("phrases");
   const [visible, setVisible] = useState(24);
   const allPhrases = useMemo(
@@ -707,6 +716,7 @@ export function Phrases({
   }, [store.words]);
   function search(value: string, word: Word | null = null, resetSaved = true) {
     request.current?.abort();
+    request.current = null;
     setGenerating(false);
     setGenerationError("");
     setQuery(value);
@@ -714,8 +724,13 @@ export function Phrases({
     if (resetSaved) setOnlySaved(false);
     setOpen(null);
   }
-  async function findMore() {
-    if (!query.trim() || !available || generating) return;
+  const requestKey = JSON.stringify([
+    englishQuery(query),
+    selectedWord?.translation || "",
+  ]);
+  const findMore = useCallback(async () => {
+    if (!canFindExpressions(query) || !available || request.current) return;
+    attempted.current.add(requestKey);
     const controller = new AbortController();
     request.current = controller;
     setGenerating(true);
@@ -724,7 +739,7 @@ export function Phrases({
       const data = await materialRequest<{ phrases: Phrase[] }>(
         "phrases",
         {
-          word: query.trim(),
+          word: englishQuery(query),
           ...(selectedWord ? { translation: selectedWord.translation } : {}),
         },
         controller.signal,
@@ -768,9 +783,20 @@ export function Phrases({
           e instanceof Error ? e.message : "Не удалось получить выражения.",
         );
     } finally {
-      if (request.current === controller) setGenerating(false);
+      if (request.current === controller) {
+        request.current = null;
+        setGenerating(false);
+      }
     }
-  }
+  }, [
+    query,
+    available,
+    requestKey,
+    selectedWord,
+    allPhrases,
+    setStore,
+    notify,
+  ]);
 
   const [onlySaved, setOnlySaved] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -779,12 +805,42 @@ export function Phrases({
     .filter(
       (p) =>
         (!onlySaved || store.phraseIds.includes(p.id)) &&
-        (!query ||
-          [p.text, p.translation, ...p.keywords].some((t) =>
-            normalize(t).includes(normalize(query)),
-          )),
+        phraseMatchesQuery(p, query),
     )
     .sort((a, b) => a.frequency - b.frequency);
+  const matchingCount = allPhrases.filter((phrase) =>
+    phraseMatchesQuery(phrase, query),
+  ).length;
+  const meanings = expressionMeanings(query, store.words);
+  const results = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (
+      !available ||
+      onlySaved ||
+      generating ||
+      composing ||
+      phraseLibrary.status === "loading" ||
+      matchingCount > 0 ||
+      englishQuery(query).length < 2 ||
+      !canFindExpressions(query) ||
+      attempted.current.has(requestKey)
+    )
+      return;
+    const timer = window.setTimeout(() => {
+      if (!composing) void findMore();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [
+    available,
+    onlySaved,
+    generating,
+    phraseLibrary.status,
+    matchingCount,
+    query,
+    requestKey,
+    findMore,
+    composing,
+  ]);
   const contextPhrase = phrases.find((p) => p.id === open) || phrases[0];
   useEffect(() => {
     onContext(
@@ -836,38 +892,107 @@ export function Phrases({
   }
   return (
     <>
-      <BookLibrary />
-      <div className="phrase-search panel">
+      <form
+        className="phrase-search panel"
+        role="search"
+        aria-label="Поиск выражений"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (composing) return;
+          setOnlySaved(false);
+          if (!matchingCount) void findMore();
+          else {
+            results.current?.focus({ preventScroll: true });
+            results.current?.scrollIntoView({
+              block: "start",
+              behavior: "auto",
+            });
+          }
+        }}
+      >
         <div className="search-field">
           <Search size={20} />
           <input
             aria-label="Найти выражения по слову"
             value={query}
-            onChange={(e) => search(e.target.value, null, false)}
+            onChange={(e) => search(e.target.value)}
+            onCompositionStart={() => setComposing(true)}
+            onCompositionEnd={(e) => {
+              setComposing(false);
+              search(e.currentTarget.value);
+            }}
             maxLength={100}
-            placeholder="Введите любое английское слово"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            enterKeyHint="search"
+            aria-describedby="phrase-search-hint"
+            placeholder="Английское слово — например, dream"
           />
           {query && (
             <button
               className="icon-button"
               onClick={() => search("", null, false)}
               aria-label="Очистить поиск"
+              type="button"
             >
               <X size={16} />
             </button>
           )}
         </div>
         <button
-          className="button secondary"
-          onClick={() => setPickerOpen(true)}
+          className="button primary"
+          type="submit"
+          disabled={
+            !query.trim() ||
+            generating ||
+            (!matchingCount && (!available || !canFindExpressions(query)))
+          }
         >
-          <BookOpen size={17} />
-          Выбрать своё слово
+          <Search size={17} /> Найти выражения
         </button>
-        <button className="button secondary" onClick={onAddWords}>
+        <p className="muted small" id="phrase-search-hint">
+          Просто введите слово. Перевод и выражения найдём сами — добавлять в
+          словарь заранее не нужно.
+        </p>
+      </form>
+      <div className="phrase-personal-actions">
+        <button className="text-button" onClick={() => setPickerOpen(true)}>
+          <BookOpen size={17} /> Выбрать своё слово
+        </button>
+        <button className="text-button" onClick={onAddWords}>
           <Plus size={17} /> Добавить слово
         </button>
       </div>
+      {meanings.length > 1 && (
+        <details className="phrase-meanings panel">
+          <summary>Уточнить значение слова</summary>
+          <p className="muted small">
+            Необязательно: выберите значение для следующего подбора.
+          </p>
+          <div className="filter-chips">
+            <button
+              aria-pressed={!selectedWord}
+              className={!selectedWord ? "active" : ""}
+              onClick={() => search(query)}
+            >
+              Любое значение
+            </button>
+            {meanings.map((word) => (
+              <button
+                key={meaningKey(word)}
+                aria-pressed={selectedWord?.translation === word.translation}
+                className={
+                  selectedWord?.translation === word.translation ? "active" : ""
+                }
+                onClick={() => search(word.word, word)}
+              >
+                {word.translation}
+              </button>
+            ))}
+          </div>
+        </details>
+      )}
       {selectedWord && (
         <p className="muted small phrase-target">
           Выбрано: <strong lang="en">{selectedWord.word}</strong> —{" "}
@@ -882,14 +1007,16 @@ export function Phrases({
       )}
       <ServiceNotice connection={connection} />
       <div className="assistant-strip">
-        <span>
-          {available
-            ? "Поиск показывает готовые выражения. Для новых вариантов со своим словом нажмите «Найти ещё выражения»."
-            : "Ищите готовые выражения по любому слову. Новый подбор с ИИ появится после восстановления помощника."}
-        </span>
+        {!query.trim() && (
+          <span>
+            {available
+              ? "Готовые выражения появятся сразу. Если совпадений нет, помощник подберёт новые."
+              : "Ищите выражения в готовой подборке. Помощник сейчас недоступен."}
+          </span>
+        )}
         <button
           className="text-button gold"
-          disabled={!available || !query.trim() || generating}
+          disabled={!available || !canFindExpressions(query) || generating}
           aria-busy={generating}
           onClick={() => void findMore()}
         >
@@ -901,10 +1028,41 @@ export function Phrases({
           {generating ? "Подбираем…" : "Найти ещё выражения"}
         </button>
       </div>
-      {generationError && (
-        <p className="form-error" role="alert">
-          {generationError}
+      {query.trim() && !canFindExpressions(query) && (
+        <p className="muted small">
+          Для нового подбора введите слово или выражение на английском. По
+          переводу можно искать в готовой подборке.
         </p>
+      )}
+      {generating && (
+        <div className="phrase-search-progress panel">
+          <p role="status">
+            <LoaderCircle size={20} className="spinning" /> Подбираем выражения
+            и примеры для «{query.trim()}»…
+          </p>
+          <button
+            className="text-button"
+            onClick={() => {
+              request.current?.abort();
+              request.current = null;
+              setGenerating(false);
+            }}
+          >
+            Отменить подбор
+          </button>
+        </div>
+      )}
+      {generationError && (
+        <div className="form-error" role="alert">
+          <p>{generationError}</p>
+          <button
+            className="button secondary"
+            disabled={generating}
+            onClick={() => void findMore()}
+          >
+            Повторить подбор
+          </button>
+        </div>
       )}
       {personalWords.length > 0 && (
         <p className="muted small">Быстрый выбор из вашего словаря</p>
@@ -939,13 +1097,25 @@ export function Phrases({
         <button
           className={`text-button ${onlySaved ? "gold" : ""}`}
           aria-pressed={onlySaved}
-          onClick={() => setOnlySaved(!onlySaved)}
+          onClick={() => {
+            request.current?.abort();
+            request.current = null;
+            setGenerating(false);
+            setGenerationError("");
+            setOnlySaved(!onlySaved);
+          }}
         >
           <Bookmark size={15} fill={onlySaved ? "currentColor" : "none"} />
           Учу · {store.phraseIds.length}
         </button>
       </div>
-      <div className="list-caption">
+      <div
+        className="list-caption"
+        ref={results}
+        tabIndex={-1}
+        role="status"
+        aria-live="polite"
+      >
         <span>
           {phrases.length}{" "}
           {plural(phrases.length, ["выражение", "выражения", "выражений"])} в
@@ -1035,7 +1205,7 @@ export function Phrases({
           Показать ещё · осталось {phrases.length - visible}
         </button>
       )}
-      {!phrases.length && phraseLibrary.status === "ready" && (
+      {!phrases.length && !generating && phraseLibrary.status === "ready" && (
         <div className="empty-state panel">
           <Search size={28} />
           <h2>
@@ -1048,12 +1218,12 @@ export function Phrases({
               ? "Нажмите «Учить» у подходящего выражения — оно появится здесь и в вашем словаре. Если включён поиск, попробуйте очистить его."
               : available
                 ? "Для этого слова нет совпадений в готовой подборке. Помощник может подобрать употребляемые выражения и примеры — без выдуманных идиом."
-                : "Для этого слова пока нет совпадений. Сохраните его в словарь и попробуйте подбор, когда помощник снова станет доступен."}
+                : "Совпадений пока нет. Попробуйте другое слово или вернитесь к подбору, когда помощник снова станет доступен."}
           </p>
           {!onlySaved && available && (
             <button
               className="button primary"
-              disabled={generating || !query.trim()}
+              disabled={generating || !canFindExpressions(query)}
               onClick={() => void findMore()}
             >
               {generating ? "Подбираем…" : "Подобрать с ИИ"}
@@ -1064,6 +1234,7 @@ export function Phrases({
           </button>
         </div>
       )}
+      <BookLibrary />
       {pickerOpen && (
         <WordPicker
           words={store.words}
